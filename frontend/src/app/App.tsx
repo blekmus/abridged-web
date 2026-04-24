@@ -116,24 +116,26 @@ export function App() {
 
 function SiteHeader({ currentPathname }: { currentPathname: string }) {
   const links = [
-    { href: "/", label: "Archive" },
-    { href: "/series", label: "Series" },
-    { href: "/shorts", label: "Shorts" },
-    { href: "/shots", label: "Shots" },
+    { href: "/series", label: "Shows", accentClass: "accent-shows" },
+    { href: "/shorts", label: "Shorts", accentClass: "accent-shorts" },
+    { href: "/shots", label: "One-Shots", accentClass: "accent-one-shots" },
   ];
 
   return (
     <header class="site-header">
-      <div class="container header-row">
-        <button type="button" class="wordmark" onClick={() => navigate("/")}>
-          Abridged Archive
-        </button>
-        <nav class="header-nav" aria-label="Primary">
+      <div class="container site-header-row">
+        <div class="site-header-rail">
+          <button type="button" class="site-mark" onClick={() => navigate("/")}>
+            The abridged catalogue
+          </button>
+        </div>
+        <nav class="site-nav" aria-label="Primary">
           {links.map((link) => (
             <NavLink
               key={link.href}
               href={link.href}
               active={currentPathname === link.href}
+              className={link.accentClass}
             >
               {link.label}
             </NavLink>
@@ -155,34 +157,38 @@ function HomePage({
   error: string | null;
   activeEntryId?: string;
 }) {
+  const heroStats = [
+    { label: "shows", count: catalog.series.length },
+    { label: "shorts", count: catalog.shorts.length },
+    { label: "one-shots", count: catalog.shots.length },
+  ];
+
   return (
     <>
       <section class="hero">
         <div class="container hero-grid">
           <div>
-            <p class="eyebrow">Local media archive</p>
             <h1 class="hero-title">
-              A watch-first home for abridged anime edits.
+              <span style={{ color: "#52dfff" }}>The</span>
+              <br />
+              <span style={{ color: "#34dcba" }}>Abridged</span>
+              <br />
+              <span style={{ color: "#ef3e78" }}>Catalogue</span>
             </h1>
-            <p class="hero-copy">
-              The browse surface stays quiet. Thumbnails, titles, and creator
-              names route directly to the player.
-            </p>
           </div>
-          <div class="hero-panel">
-            <div class="hero-stat">
-              <span class="hero-stat-label">Series</span>
-              <strong>{catalog.series.length}</strong>
-            </div>
-            <div class="hero-stat">
-              <span class="hero-stat-label">Shorts</span>
-              <strong>{catalog.shorts.length}</strong>
-            </div>
-            <div class="hero-stat">
-              <span class="hero-stat-label">Shots</span>
-              <strong>{catalog.shots.length}</strong>
-            </div>
+          <div class="hero-panel" aria-label="Catalog counts">
+            {heroStats.map((stat) => (
+              <div class={`hero-stat ${stat.label}-stat`} key={stat.label}>
+                <strong>{loading ? "..." : stat.count}</strong>
+                <span class="hero-stat-label">{stat.label}</span>
+              </div>
+            ))}
           </div>
+
+          <p class="hero-copy">
+            The browse surface stays quiet. Thumbnails, titles, and creator
+            names route directly to the player.
+          </p>
         </div>
       </section>
 
@@ -192,19 +198,25 @@ function HomePage({
       {!loading && (
         <>
           <BrowseSection
-            title="Series"
+            title="Shows"
+            titleHref="/series"
+            titleClassName="accent-shows"
             entries={catalog.series}
             {...optionalActiveEntryId(activeEntryId)}
             limited
           />
           <BrowseSection
             title="Shorts"
+            titleHref="/shorts"
+            titleClassName="accent-shorts"
             entries={catalog.shorts}
             {...optionalActiveEntryId(activeEntryId)}
             limited
           />
           <BrowseSection
-            title="Shots"
+            title="One-Shots"
+            titleHref="/shots"
+            titleClassName="accent-one-shots"
             entries={catalog.shots}
             {...optionalActiveEntryId(activeEntryId)}
             limited
@@ -254,7 +266,10 @@ function BrowsePage({
 function CreatorPage({
   slug,
   activeEntryId,
-}: { slug: string; activeEntryId?: string }) {
+}: {
+  slug: string;
+  activeEntryId?: string;
+}) {
   const [state, setState] = useState<AsyncState<Entry[]>>({
     data: null,
     loading: true,
@@ -309,7 +324,10 @@ function CreatorPage({
 function WatchPage({
   entryId,
   episodeId,
-}: { entryId: string; episodeId?: string }) {
+}: {
+  entryId: string;
+  episodeId?: string;
+}) {
   const [state, setState] = useState<AsyncState<Entry>>({
     data: null,
     loading: true,
@@ -359,7 +377,7 @@ function WatchPage({
   return (
     <section class="watch-page">
       <div class="container">
-        <div class="watch-breadcrumbs">
+        {/* <div class="watch-breadcrumbs">
           <NavLink href={TYPE_META[entry.type].path} active={false}>
             {TYPE_META[entry.type].title}
           </NavLink>
@@ -367,7 +385,7 @@ function WatchPage({
           <NavLink href={`/creator/${entry.creatorSlug}`} active={false}>
             {entry.creator}
           </NavLink>
-        </div>
+        </div> */}
 
         <div class="player-shell">
           <video
@@ -382,15 +400,18 @@ function WatchPage({
         <div class="watch-layout">
           <div class="watch-main">
             <div class="metadata-block">
+              <p>
+                Produced by {" "}
+                <button
+                  type="button"
+                  class="creator-link card-meta"
+                  onClick={() => navigate(`/creator/${entry.creatorSlug}`)}
+                >
+                  {entry.creator}
+                </button>
+              </p>
               <p class="video-title">{episode.videoTitle}</p>
-              <h1 class="entry-title">{entry.entryTitle}</h1>
-              <button
-                type="button"
-                class="creator-link"
-                onClick={() => navigate(`/creator/${entry.creatorSlug}`)}
-              >
-                {entry.creator}
-              </button>
+              {/* <h1 class="entry-title">{entry.entryTitle}</h1> */}
             </div>
 
             {entry.description ? (
@@ -427,12 +448,16 @@ function WatchPage({
 
 function BrowseSection({
   title,
+  titleHref,
+  titleClassName,
   entries,
   activeEntryId,
   limited = false,
   hideHeader = false,
 }: {
   title: string;
+  titleHref?: string;
+  titleClassName?: string;
   entries: Entry[];
   activeEntryId?: string;
   limited?: boolean;
@@ -450,7 +475,13 @@ function BrowseSection({
   return (
     <section class="browse-section">
       <div class="container">
-        {!hideHeader ? <SectionHeader title={title} /> : null}
+        {!hideHeader ? (
+          <SectionHeader
+            title={title}
+            href={titleHref}
+            className={titleClassName}
+          />
+        ) : null}
         {entries.length === 0 ? (
           <p class="empty-state">No items found in this section.</p>
         ) : (
@@ -503,9 +534,8 @@ function BrowseCard({
         <Thumbnail episode={poster} title={entry.entryTitle} />
       </div>
       <div class="card-copy">
-        <span class="type-tag">{TYPE_META[entry.type].title}</span>
-        <h3 class="card-title">{entry.entryTitle}</h3>
         <span class="card-meta">{entry.creator}</span>
+        <h3 class="card-title">{entry.entryTitle}</h3>
       </div>
     </button>
   );
@@ -553,11 +583,33 @@ function DescriptionBlock({ text }: { text: string }) {
 
 function SectionHeader({
   title,
+  href,
+  className,
   compact = false,
-}: { title: string; compact?: boolean }) {
+}: {
+  title: string;
+  href?: string;
+  className?: string;
+  compact?: boolean;
+}) {
   return (
     <div class={`section-header ${compact ? "is-compact" : ""}`}>
-      <h2>{title}</h2>
+      <h2>
+        {href ? (
+          <a
+            href={href}
+            class={`section-title-link ${className ?? ""}`}
+            onClick={(event) => {
+              event.preventDefault();
+              navigate(href);
+            }}
+          >
+            {title}
+          </a>
+        ) : (
+          <span class={`section-title-text ${className ?? ""}`}>{title}</span>
+        )}
+      </h2>
       <span class="section-rule" />
     </div>
   );
@@ -566,16 +618,18 @@ function SectionHeader({
 function NavLink({
   href,
   active,
+  className,
   children,
 }: {
   href: string;
   active: boolean;
+  className?: string;
   children: ComponentChildren;
 }) {
   return (
     <a
       href={href}
-      class={`nav-link ${active ? "is-active" : ""}`}
+      class={`nav-link ${className ?? ""} ${active ? "is-active" : ""}`}
       onClick={(event) => {
         event.preventDefault();
         navigate(href);
