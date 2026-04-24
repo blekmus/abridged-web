@@ -12,7 +12,7 @@ import (
 func main() {
 	archiveRoot := envOr("ARCHIVE_ROOT", "../archive")
 	port := envOr("PORT", "8080")
-	appEnv := strings.ToLower(envOr("APP_ENV", "production"))
+	appEnv := strings.ToLower(envOr("APP_ENV", "development"))
 	serveFromDisk := appEnv == "development"
 
 	library, err := catalog.Load(archiveRoot)

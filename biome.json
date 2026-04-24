@@ -6,7 +6,8 @@
     "useIgnoreFile": false
   },
   "files": {
-    "ignore": ["frontend/dist/**", "node_modules/**", "abridged"]
+    "ignore": ["frontend/dist/**", "node_modules/**", "abridged"],
+    "ignoreUnknown": true
   },
   "formatter": {
     "enabled": true,
