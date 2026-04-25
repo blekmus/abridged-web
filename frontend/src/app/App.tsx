@@ -40,7 +40,7 @@ const TYPE_META: Record<
   EntryType,
   { title: string; eyebrow: string; path: string }
 > = {
-  series: { title: "Series", eyebrow: "Multi-episode runs", path: "/series" },
+  series: { title: "Shows", eyebrow: "Multi-episode runs", path: "/series" },
   short: {
     title: "Shorts",
     eyebrow: "Edits with practically no plot",
