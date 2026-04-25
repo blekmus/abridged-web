@@ -3,8 +3,10 @@ package catalog
 import (
 	"crypto/sha1"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -42,6 +44,8 @@ type Episode struct {
 	RawStem         string `json:"rawStem"`
 	Kind            string `json:"kind,omitempty"`
 	Number          string `json:"number,omitempty"`
+	Description     string `json:"description,omitempty"`
+	Date            string `json:"date,omitempty"`
 	DurationSeconds int    `json:"durationSeconds"`
 	VideoURL        string `json:"videoUrl"`
 	ThumbnailURL    string `json:"thumbnailUrl,omitempty"`
@@ -55,6 +59,40 @@ type EpisodeAsset struct {
 	ThumbnailPath string
 }
 
+type videoMetadata struct {
+	Description     string
+	Date            string
+	DurationSeconds int
+}
+
+type ffprobeFormatPayload struct {
+	Format struct {
+		Duration string            `json:"duration"`
+		Tags     map[string]string `json:"tags"`
+	} `json:"format"`
+}
+
+type cachedVideoMetadata struct {
+	Size            int64  `json:"size"`
+	ModTimeUnixNano int64  `json:"modTimeUnixNano"`
+	Description     string `json:"description,omitempty"`
+	Date            string `json:"date,omitempty"`
+	DurationSeconds int    `json:"durationSeconds"`
+}
+
+type videoMetadataCacheFile struct {
+	Version int                            `json:"version"`
+	Items   map[string]cachedVideoMetadata `json:"items"`
+}
+
+type videoMetadataCache struct {
+	root  string
+	path  string
+	items map[string]cachedVideoMetadata
+	seen  map[string]struct{}
+	dirty bool
+}
+
 type CatalogResponse struct {
 	Series []Entry `json:"series"`
 	Shorts []Entry `json:"shorts"`
@@ -63,6 +101,7 @@ type CatalogResponse struct {
 
 type Library struct {
 	root          string
+	metadata      *videoMetadataCache
 	all           []Entry
 	byType        map[EntryType][]Entry
 	byEntryID     map[string]Entry
@@ -83,6 +122,7 @@ func Load(root string) (*Library, error) {
 
 	lib := &Library{
 		root:          absRoot,
+		metadata:      newVideoMetadataCache(absRoot),
 		byType:        map[EntryType][]Entry{},
 		byEntryID:     map[string]Entry{},
 		byEpisodeID:   map[string]EpisodeAsset{},
@@ -114,6 +154,13 @@ func Load(root string) (*Library, error) {
 					ThumbnailPath: episode.ThumbnailPath,
 				}
 			}
+		}
+	}
+
+	if lib.metadata != nil {
+		lib.metadata.PruneMissing()
+		if err := lib.metadata.Save(); err != nil {
+			return nil, fmt.Errorf("save video metadata cache: %w", err)
 		}
 	}
 
@@ -162,7 +209,7 @@ func (l *Library) scanCategory(categoryPath string, entryType EntryType) ([]Entr
 		}
 
 		entryPath := filepath.Join(categoryPath, item.Name())
-		entry, ok, scanErr := scanEntry(entryPath, item.Name(), entryType)
+		entry, ok, scanErr := l.scanEntry(entryPath, item.Name(), entryType)
 		if scanErr != nil {
 			return nil, scanErr
 		}
@@ -183,7 +230,7 @@ func (l *Library) scanCategory(categoryPath string, entryType EntryType) ([]Entr
 	return entries, nil
 }
 
-func scanEntry(entryPath, folderName string, entryType EntryType) (Entry, bool, error) {
+func (l *Library) scanEntry(entryPath, folderName string, entryType EntryType) (Entry, bool, error) {
 	creator, title := parseEntryFolder(folderName)
 	entryID := stableID(string(entryType), folderName)
 
@@ -199,13 +246,13 @@ func scanEntry(entryPath, folderName string, entryType EntryType) (Entry, bool, 
 	var episodes []episodeRecord
 	switch entryType {
 	case EntryTypeShort, EntryTypeShot:
-		record, ok := scanSingleRelease(entryPath, entryID, entryType, title)
+		record, ok := l.scanSingleRelease(entryPath, entryID, entryType, title)
 		if !ok {
 			return Entry{}, false, nil
 		}
 		episodes = append(episodes, record)
 	case EntryTypeSeries:
-		seriesEpisodes, err := scanSeries(entryPath, entryID)
+		seriesEpisodes, err := l.scanSeries(entryPath, entryID)
 		if err != nil {
 			return Entry{}, false, err
 		}
@@ -247,11 +294,12 @@ type episodeRecord struct {
 	hasNumber   bool
 }
 
-func scanSingleRelease(entryPath, entryID string, entryType EntryType, title string) (episodeRecord, bool) {
+func (l *Library) scanSingleRelease(entryPath, entryID string, entryType EntryType, title string) (episodeRecord, bool) {
 	videoPath := filepath.Join(entryPath, "1.mp4")
 	if _, err := os.Stat(videoPath); err != nil {
 		return episodeRecord{}, false
 	}
+	metadata := l.readVideoMetadata(videoPath)
 
 	thumbPath := filepath.Join(entryPath, "1.webp")
 	thumbnailURL := ""
@@ -272,24 +320,27 @@ func scanSingleRelease(entryPath, entryID string, entryType EntryType, title str
 
 	return episodeRecord{
 		Episode: Episode{
-			ID:            episodeID,
-			EntryID:       entryID,
-			Label:         displayLabel,
-			VideoTitle:    title,
-			DisplayTitle:  title,
-			RawStem:       "1",
-			VideoURL:      "/video/" + episodeID,
-			ThumbnailURL:  thumbnailURL,
-			HasThumbnail:  thumbnailURL != "",
-			VideoPath:     videoPath,
-			ThumbnailPath: thumbPath,
+			ID:              episodeID,
+			EntryID:         entryID,
+			Label:           displayLabel,
+			VideoTitle:      title,
+			DisplayTitle:    title,
+			RawStem:         "1",
+			Description:     metadata.Description,
+			Date:            metadata.Date,
+			DurationSeconds: metadata.DurationSeconds,
+			VideoURL:        "/video/" + episodeID,
+			ThumbnailURL:    thumbnailURL,
+			HasThumbnail:    thumbnailURL != "",
+			VideoPath:       videoPath,
+			ThumbnailPath:   thumbPath,
 		},
 		videoPath: videoPath,
 		thumbPath: thumbPath,
 	}, true
 }
 
-func scanSeries(entryPath, entryID string) ([]episodeRecord, error) {
+func (l *Library) scanSeries(entryPath, entryID string) ([]episodeRecord, error) {
 	items, err := os.ReadDir(entryPath)
 	if err != nil {
 		return nil, fmt.Errorf("read series entry %s: %w", entryPath, err)
@@ -305,6 +356,7 @@ func scanSeries(entryPath, entryID string) ([]episodeRecord, error) {
 		videoPath := filepath.Join(entryPath, item.Name())
 		thumbPath := filepath.Join(entryPath, stem+".webp")
 		parsed := parseSeriesStem(stem)
+		metadata := l.readVideoMetadata(videoPath)
 
 		episodeID := stableID(entryID, stem)
 		thumbnailURL := ""
@@ -316,19 +368,22 @@ func scanSeries(entryPath, entryID string) ([]episodeRecord, error) {
 
 		episodes = append(episodes, episodeRecord{
 			Episode: Episode{
-				ID:            episodeID,
-				EntryID:       entryID,
-				Label:         parsed.Label(),
-				VideoTitle:    parsed.VideoTitle(stem),
-				DisplayTitle:  stem,
-				RawStem:       stem,
-				Kind:          parsed.Kind,
-				Number:        parsed.Number,
-				VideoURL:      "/video/" + episodeID,
-				ThumbnailURL:  thumbnailURL,
-				HasThumbnail:  thumbnailURL != "",
-				VideoPath:     videoPath,
-				ThumbnailPath: thumbPath,
+				ID:              episodeID,
+				EntryID:         entryID,
+				Label:           parsed.Label(),
+				VideoTitle:      parsed.VideoTitle(stem),
+				DisplayTitle:    stem,
+				RawStem:         stem,
+				Kind:            parsed.Kind,
+				Number:          parsed.Number,
+				Description:     metadata.Description,
+				Date:            metadata.Date,
+				DurationSeconds: metadata.DurationSeconds,
+				VideoURL:        "/video/" + episodeID,
+				ThumbnailURL:    thumbnailURL,
+				HasThumbnail:    thumbnailURL != "",
+				VideoPath:       videoPath,
+				ThumbnailPath:   thumbPath,
 			},
 			videoPath:   videoPath,
 			thumbPath:   thumbPath,
@@ -465,6 +520,178 @@ func readEntryDescription(entryPath string) string {
 		data, err := os.ReadFile(filepath.Join(entryPath, item.Name()))
 		if err == nil {
 			return strings.TrimSpace(string(data))
+		}
+	}
+
+	return ""
+}
+
+const (
+	videoMetadataCacheVersion  = 2
+	videoMetadataCacheFilename = ".abridged-video-metadata.json"
+)
+
+func newVideoMetadataCache(root string) *videoMetadataCache {
+	cache := &videoMetadataCache{
+		root:  root,
+		path:  filepath.Join(root, videoMetadataCacheFilename),
+		items: map[string]cachedVideoMetadata{},
+		seen:  map[string]struct{}{},
+	}
+	cache.load()
+	return cache
+}
+
+func (c *videoMetadataCache) load() {
+	data, err := os.ReadFile(c.path)
+	if err != nil {
+		return
+	}
+
+	var payload videoMetadataCacheFile
+	if err := json.Unmarshal(data, &payload); err != nil {
+		return
+	}
+	if payload.Version != videoMetadataCacheVersion || payload.Items == nil {
+		return
+	}
+
+	c.items = payload.Items
+}
+
+func (c *videoMetadataCache) Read(videoPath string) videoMetadata {
+	info, err := os.Stat(videoPath)
+	if err != nil {
+		return videoMetadata{}
+	}
+
+	key := c.key(videoPath)
+	c.seen[key] = struct{}{}
+
+	if cached, ok := c.items[key]; ok && cached.matches(info) {
+		return cached.metadata()
+	}
+
+	metadata, ok := probeVideoMetadata(videoPath)
+	if !ok {
+		return videoMetadata{}
+	}
+
+	c.items[key] = cachedVideoMetadata{
+		Size:            info.Size(),
+		ModTimeUnixNano: info.ModTime().UnixNano(),
+		Description:     metadata.Description,
+		Date:            metadata.Date,
+		DurationSeconds: metadata.DurationSeconds,
+	}
+	c.dirty = true
+
+	return metadata
+}
+
+func (c *videoMetadataCache) PruneMissing() {
+	for key := range c.items {
+		if _, ok := c.seen[key]; ok {
+			continue
+		}
+		delete(c.items, key)
+		c.dirty = true
+	}
+}
+
+func (c *videoMetadataCache) Save() error {
+	if !c.dirty {
+		return nil
+	}
+
+	data, err := json.MarshalIndent(videoMetadataCacheFile{
+		Version: videoMetadataCacheVersion,
+		Items:   c.items,
+	}, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	tempPath := c.path + ".tmp"
+	if err := os.WriteFile(tempPath, data, 0o644); err != nil {
+		return err
+	}
+	if err := os.Rename(tempPath, c.path); err != nil {
+		_ = os.Remove(tempPath)
+		return err
+	}
+
+	c.dirty = false
+	return nil
+}
+
+func (c *videoMetadataCache) key(videoPath string) string {
+	relative, err := filepath.Rel(c.root, videoPath)
+	if err != nil || relative == ".." || strings.HasPrefix(relative, ".."+string(filepath.Separator)) || filepath.IsAbs(relative) {
+		return filepath.ToSlash(videoPath)
+	}
+	return filepath.ToSlash(relative)
+}
+
+func (m cachedVideoMetadata) matches(info os.FileInfo) bool {
+	return m.Size == info.Size() && m.ModTimeUnixNano == info.ModTime().UnixNano()
+}
+
+func (m cachedVideoMetadata) metadata() videoMetadata {
+	return videoMetadata{
+		Description:     m.Description,
+		Date:            m.Date,
+		DurationSeconds: m.DurationSeconds,
+	}
+}
+
+func (l *Library) readVideoMetadata(videoPath string) videoMetadata {
+	if l.metadata == nil {
+		return videoMetadata{}
+	}
+	return l.metadata.Read(videoPath)
+}
+
+func probeVideoMetadata(videoPath string) (videoMetadata, bool) {
+	output, err := exec.Command(
+		"ffprobe",
+		"-v",
+		"error",
+		"-print_format",
+		"json",
+		"-show_format",
+		videoPath,
+	).Output()
+	if err != nil {
+		return videoMetadata{}, false
+	}
+
+	var payload ffprobeFormatPayload
+	if err := json.Unmarshal(output, &payload); err != nil {
+		return videoMetadata{}, false
+	}
+
+	durationSeconds := 0
+	if duration, err := strconv.ParseFloat(payload.Format.Duration, 64); err == nil {
+		durationSeconds = int(duration)
+	}
+
+	return videoMetadata{
+		Description:     firstMetadataTag(payload.Format.Tags, "description", "synopsis"),
+		Date:            firstMetadataTag(payload.Format.Tags, "date"),
+		DurationSeconds: durationSeconds,
+	}, true
+}
+
+func firstMetadataTag(tags map[string]string, names ...string) string {
+	if len(tags) == 0 {
+		return ""
+	}
+
+	for _, name := range names {
+		value := strings.TrimSpace(tags[name])
+		if value != "" {
+			return value
 		}
 	}
 

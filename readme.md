@@ -40,3 +40,15 @@ Example:
 ```sh
 PORT=3000 ARCHIVE_ROOT=/path/to/archive ./abridged
 ```
+
+## Features
+
+### Video Metadata Cache
+
+On startup, the backend scans the archive and builds video descriptions and durations from `ffprobe`. The results are cached in `ARCHIVE_ROOT/.abridged-video-metadata.json` so the web app does not need to run `ffprobe` during request handling.
+
+On later server runs:
+
+- unchanged videos reuse the cached metadata
+- new or modified videos are re-probed and written back to the cache
+- deleted videos are removed from the cache file

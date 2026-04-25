@@ -1,11 +1,22 @@
 import type { EntryType } from "./types";
 
+export const APP_NAVIGATION_EVENT = "abridged:navigate";
+
 export type Route =
   | { name: "home" }
   | { name: "browse"; entryType: EntryType }
   | { name: "creator"; slug: string }
   | { name: "watch"; entryId: string; episodeId?: string }
   | { name: "not-found"; path: string };
+
+export type ScrollPosition = {
+  left: number;
+  top: number;
+};
+
+type AppHistoryState = {
+  scroll?: ScrollPosition;
+};
 
 export function currentPath(): string {
   return window.location.pathname;
@@ -15,8 +26,43 @@ export function navigate(to: string): void {
   if (window.location.pathname === to) {
     return;
   }
-  window.history.pushState({}, "", to);
-  window.dispatchEvent(new PopStateEvent("popstate"));
+
+  saveCurrentScrollPosition();
+  window.history.pushState({ scroll: { left: 0, top: 0 } }, "", to);
+  window.dispatchEvent(new CustomEvent(APP_NAVIGATION_EVENT));
+}
+
+export function saveCurrentScrollPosition(): void {
+  const state = readHistoryState();
+  window.history.replaceState(
+    {
+      ...state,
+      scroll: {
+        left: window.scrollX,
+        top: window.scrollY,
+      },
+    },
+    "",
+    currentPath(),
+  );
+}
+
+export function currentHistoryScrollPosition(): ScrollPosition {
+  const scroll = readHistoryState().scroll;
+
+  if (scroll && Number.isFinite(scroll.left) && Number.isFinite(scroll.top)) {
+    return scroll;
+  }
+
+  return { left: 0, top: 0 };
+}
+
+function readHistoryState(): AppHistoryState {
+  if (typeof window.history.state !== "object" || !window.history.state) {
+    return {};
+  }
+
+  return window.history.state as AppHistoryState;
 }
 
 export function parseRoute(pathname: string): Route {

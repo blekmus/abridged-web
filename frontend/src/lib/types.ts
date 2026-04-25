@@ -9,6 +9,8 @@ export type Episode = {
   rawStem: string;
   kind?: string;
   number?: string;
+  description?: string;
+  date?: string;
   durationSeconds: number;
   videoUrl: string;
   thumbnailUrl?: string;
