@@ -43,7 +43,7 @@
   --accent-shows: #52dfff;
   --accent-shorts: #34dcba;
   --accent-one-shots: #ef3e78;
-  --accent-qa: #de3131;
+  --accent-qa: #ff6060;
   --accent-creator: #8b73b9;
   --font-display: "Poly Sans", sans-serif;
   --font-body: "Canela Deck", serif;
@@ -288,7 +288,7 @@ video {
 }
 
 .footer-simple {
-  --footer-accent: #ffb000;
+  --footer-accent: #ffd556;
   display: grid;
   gap: var(--space-5);
 }
@@ -819,7 +819,6 @@ video {
 }
 
 .watch-entry-title {
-  max-width: 14ch;
   line-height: 0.82;
   letter-spacing: 0;
 }

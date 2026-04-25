@@ -273,6 +273,14 @@ function HomePage({
     { label: "shorts", count: catalog.shorts.length },
     { label: "one-shots", count: catalog.shots.length },
   ];
+  const randomizedHomeEntries = useMemo(
+    () => ({
+      series: shuffledEntries(catalog.series),
+      shorts: shuffledEntries(catalog.shorts),
+      shots: shuffledEntries(catalog.shots),
+    }),
+    [catalog.series, catalog.shorts, catalog.shots],
+  );
 
   return (
     <>
@@ -312,7 +320,7 @@ function HomePage({
             title="Shows"
             titleHref="/series"
             titleClassName="accent-shows"
-            entries={catalog.series}
+            entries={randomizedHomeEntries.series}
             {...optionalActiveEntryId(activeEntryId)}
             limited
           />
@@ -320,7 +328,7 @@ function HomePage({
             title="Shorts"
             titleHref="/shorts"
             titleClassName="accent-shorts"
-            entries={catalog.shorts}
+            entries={randomizedHomeEntries.shorts}
             {...optionalActiveEntryId(activeEntryId)}
             limited
           />
@@ -328,7 +336,7 @@ function HomePage({
             title="One-Shots"
             titleHref="/shots"
             titleClassName="accent-one-shots"
-            entries={catalog.shots}
+            entries={randomizedHomeEntries.shots}
             {...optionalActiveEntryId(activeEntryId)}
             limited
           />
@@ -943,7 +951,7 @@ function BrowseCard({
             handleInternalLinkClick(event, `/creator/${entry.creatorSlug}`);
           }}
         >
-          {entry.creator}
+          [{entry.creator}]
         </a>
         <a
           href={`/watch/${entry.id}`}
@@ -1211,12 +1219,39 @@ function entriesForType(
 ): Entry[] {
   switch (entryType) {
     case "series":
-      return catalog.series;
+      return sortedEntriesByTitle(catalog.series);
     case "short":
-      return catalog.shorts;
+      return sortedEntriesByTitle(catalog.shorts);
     case "shot":
-      return catalog.shots;
+      return sortedEntriesByTitle(catalog.shots);
   }
+}
+
+function sortedEntriesByTitle(entries: Entry[]): Entry[] {
+  return [...entries].sort((leftEntry, rightEntry) =>
+    leftEntry.entryTitle.localeCompare(rightEntry.entryTitle, undefined, {
+      sensitivity: "base",
+    }),
+  );
+}
+
+function shuffledEntries(entries: Entry[]): Entry[] {
+  const shuffled = [...entries];
+
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const randomIndex = Math.floor(Math.random() * (index + 1));
+    const currentEntry = shuffled[index];
+    const randomEntry = shuffled[randomIndex];
+
+    if (!currentEntry || !randomEntry) {
+      continue;
+    }
+
+    shuffled[index] = randomEntry;
+    shuffled[randomIndex] = currentEntry;
+  }
+
+  return shuffled;
 }
 
 function groupEntriesByType(entries: Entry[]): Record<EntryType, Entry[]> {
