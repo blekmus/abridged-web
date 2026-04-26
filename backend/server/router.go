@@ -36,6 +36,7 @@ func NewRouter(library *catalog.Library, options Options) (*gin.Engine, error) {
 	router.GET("/api/series", server.handleSeries)
 	router.GET("/api/shorts", server.handleShorts)
 	router.GET("/api/shots", server.handleShots)
+	router.GET("/api/songs", server.handleSongs)
 	router.GET("/api/creator/:slug", server.handleCreator)
 	router.GET("/api/entry/:entryID", server.handleEntry)
 	router.GET("/video/:assetID", server.handleVideo)
@@ -64,6 +65,10 @@ func (s *appServer) handleShorts(c *gin.Context) {
 
 func (s *appServer) handleShots(c *gin.Context) {
 	c.JSON(http.StatusOK, s.library.EntriesForType(catalog.EntryTypeShot))
+}
+
+func (s *appServer) handleSongs(c *gin.Context) {
+	c.JSON(http.StatusOK, s.library.CatalogResponse().Songs)
 }
 
 func (s *appServer) handleCreator(c *gin.Context) {

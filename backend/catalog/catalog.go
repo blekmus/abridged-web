@@ -21,18 +21,26 @@ const (
 	EntryTypeSeries EntryType = "series"
 	EntryTypeShort  EntryType = "short"
 	EntryTypeShot   EntryType = "shot"
+	EntryTypeSong   EntryType = "song"
+)
+
+type EntrySubtype string
+
+const (
+	EntrySubtypeAMV EntrySubtype = "amv"
 )
 
 type Entry struct {
-	ID               string    `json:"id"`
-	Type             EntryType `json:"type"`
-	Creator          string    `json:"creator"`
-	CreatorSlug      string    `json:"creatorSlug"`
-	EntryTitle       string    `json:"entryTitle"`
-	Description      string    `json:"description,omitempty"`
-	DefaultEpisodeID string    `json:"defaultEpisodeId"`
-	PosterEpisodeID  string    `json:"posterEpisodeId"`
-	Episodes         []Episode `json:"episodes"`
+	ID               string       `json:"id"`
+	Type             EntryType    `json:"type"`
+	Subtype          EntrySubtype `json:"subtype,omitempty"`
+	Creator          string       `json:"creator"`
+	CreatorSlug      string       `json:"creatorSlug"`
+	EntryTitle       string       `json:"entryTitle"`
+	Description      string       `json:"description,omitempty"`
+	DefaultEpisodeID string       `json:"defaultEpisodeId"`
+	PosterEpisodeID  string       `json:"posterEpisodeId"`
+	Episodes         []Episode    `json:"episodes"`
 }
 
 type Episode struct {
@@ -94,9 +102,11 @@ type videoMetadataCache struct {
 }
 
 type CatalogResponse struct {
-	Series []Entry `json:"series"`
-	Shorts []Entry `json:"shorts"`
-	Shots  []Entry `json:"shots"`
+	Series   []Entry `json:"series"`
+	Shorts   []Entry `json:"shorts"`
+	Shots    []Entry `json:"shots"`
+	Songs    []Entry `json:"songs"`
+	SongAMVs []Entry `json:"songAmvs"`
 }
 
 type Library struct {
@@ -136,6 +146,7 @@ func Load(root string) (*Library, error) {
 		{dir: "Series", kind: EntryTypeSeries},
 		{dir: "Shorts", kind: EntryTypeShort},
 		{dir: "Shots", kind: EntryTypeShot},
+		{dir: "Songs", kind: EntryTypeSong},
 	}
 
 	for _, category := range categoryDirs {
@@ -143,17 +154,14 @@ func Load(root string) (*Library, error) {
 		if scanErr != nil {
 			return nil, scanErr
 		}
-		lib.byType[category.kind] = entries
-		lib.all = append(lib.all, entries...)
-		for _, entry := range entries {
-			lib.byEntryID[entry.ID] = entry
-			lib.byCreatorSlug[entry.CreatorSlug] = append(lib.byCreatorSlug[entry.CreatorSlug], entry)
-			for _, episode := range entry.Episodes {
-				lib.byEpisodeID[episode.ID] = EpisodeAsset{
-					VideoPath:     episode.VideoPath,
-					ThumbnailPath: episode.ThumbnailPath,
-				}
+		lib.registerEntries(category.kind, entries)
+
+		if category.kind == EntryTypeSong {
+			amvs, scanErr := lib.scanCategory(filepath.Join(absRoot, category.dir, "AMV"), category.kind, EntrySubtypeAMV)
+			if scanErr != nil {
+				return nil, scanErr
 			}
+			lib.registerEntries(category.kind, amvs)
 		}
 	}
 
@@ -169,9 +177,11 @@ func Load(root string) (*Library, error) {
 
 func (l *Library) CatalogResponse() CatalogResponse {
 	return CatalogResponse{
-		Series: cloneEntries(l.byType[EntryTypeSeries]),
-		Shorts: cloneEntries(l.byType[EntryTypeShort]),
-		Shots:  cloneEntries(l.byType[EntryTypeShot]),
+		Series:   cloneEntries(l.byType[EntryTypeSeries]),
+		Shorts:   cloneEntries(l.byType[EntryTypeShort]),
+		Shots:    cloneEntries(l.byType[EntryTypeShot]),
+		Songs:    cloneEntries(entriesWithSubtype(l.byType[EntryTypeSong], "")),
+		SongAMVs: cloneEntries(entriesWithSubtype(l.byType[EntryTypeSong], EntrySubtypeAMV)),
 	}
 }
 
@@ -193,7 +203,22 @@ func (l *Library) EpisodeAsset(episodeID string) (EpisodeAsset, bool) {
 	return asset, ok
 }
 
-func (l *Library) scanCategory(categoryPath string, entryType EntryType) ([]Entry, error) {
+func (l *Library) registerEntries(entryType EntryType, entries []Entry) {
+	l.byType[entryType] = append(l.byType[entryType], entries...)
+	l.all = append(l.all, entries...)
+	for _, entry := range entries {
+		l.byEntryID[entry.ID] = entry
+		l.byCreatorSlug[entry.CreatorSlug] = append(l.byCreatorSlug[entry.CreatorSlug], entry)
+		for _, episode := range entry.Episodes {
+			l.byEpisodeID[episode.ID] = EpisodeAsset{
+				VideoPath:     episode.VideoPath,
+				ThumbnailPath: episode.ThumbnailPath,
+			}
+		}
+	}
+}
+
+func (l *Library) scanCategory(categoryPath string, entryType EntryType, subtype ...EntrySubtype) ([]Entry, error) {
 	items, err := os.ReadDir(categoryPath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -203,13 +228,17 @@ func (l *Library) scanCategory(categoryPath string, entryType EntryType) ([]Entr
 	}
 
 	var entries []Entry
+	entrySubtype := firstSubtype(subtype)
 	for _, item := range items {
 		if !item.IsDir() {
 			continue
 		}
+		if entryType == EntryTypeSong && entrySubtype == "" && strings.EqualFold(item.Name(), "AMV") {
+			continue
+		}
 
 		entryPath := filepath.Join(categoryPath, item.Name())
-		entry, ok, scanErr := l.scanEntry(entryPath, item.Name(), entryType)
+		entry, ok, scanErr := l.scanEntry(entryPath, item.Name(), entryType, entrySubtype)
 		if scanErr != nil {
 			return nil, scanErr
 		}
@@ -230,13 +259,19 @@ func (l *Library) scanCategory(categoryPath string, entryType EntryType) ([]Entr
 	return entries, nil
 }
 
-func (l *Library) scanEntry(entryPath, folderName string, entryType EntryType) (Entry, bool, error) {
+func (l *Library) scanEntry(entryPath, folderName string, entryType EntryType, subtype EntrySubtype) (Entry, bool, error) {
 	creator, title := parseEntryFolder(folderName)
-	entryID := stableID(string(entryType), folderName)
+	idParts := []string{string(entryType)}
+	if subtype != "" {
+		idParts = append(idParts, string(subtype))
+	}
+	idParts = append(idParts, folderName)
+	entryID := stableID(idParts...)
 
 	entry := Entry{
 		ID:          entryID,
 		Type:        entryType,
+		Subtype:     subtype,
 		Creator:     creator,
 		CreatorSlug: slugify(creator),
 		EntryTitle:  title,
@@ -245,7 +280,7 @@ func (l *Library) scanEntry(entryPath, folderName string, entryType EntryType) (
 
 	var episodes []episodeRecord
 	switch entryType {
-	case EntryTypeShort, EntryTypeShot:
+	case EntryTypeShort, EntryTypeShot, EntryTypeSong:
 		record, ok := l.scanSingleRelease(entryPath, entryID, entryType, title)
 		if !ok {
 			return Entry{}, false, nil
@@ -316,6 +351,9 @@ func (l *Library) scanSingleRelease(entryPath, entryID string, entryType EntryTy
 	}
 	if entryType == EntryTypeShort {
 		displayLabel = "SHORT"
+	}
+	if entryType == EntryTypeSong {
+		displayLabel = "SONG"
 	}
 
 	return episodeRecord{
@@ -696,6 +734,23 @@ func firstMetadataTag(tags map[string]string, names ...string) string {
 	}
 
 	return ""
+}
+
+func firstSubtype(subtypes []EntrySubtype) EntrySubtype {
+	if len(subtypes) == 0 {
+		return ""
+	}
+	return subtypes[0]
+}
+
+func entriesWithSubtype(entries []Entry, subtype EntrySubtype) []Entry {
+	filtered := make([]Entry, 0, len(entries))
+	for _, entry := range entries {
+		if entry.Subtype == subtype {
+			filtered = append(filtered, entry)
+		}
+	}
+	return filtered
 }
 
 func stableID(parts ...string) string {

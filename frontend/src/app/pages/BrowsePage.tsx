@@ -4,12 +4,13 @@ import { InlineError } from "../components/InlineError";
 import { LoadingGrid } from "../components/LoadingGrid";
 import { SectionHeader } from "../components/SectionHeader";
 import { TYPE_META } from "../constants";
-import { accentClassForEntryType } from "../entryUtils";
+import { accentClassForEntryType, sortedEntriesByTitle } from "../entryUtils";
 import { optionalActiveEntryId } from "../propUtils";
 
 export function BrowsePage({
   entryType,
   entries,
+  songAmvs,
   loading,
   error,
   activeEntryId,
@@ -17,6 +18,7 @@ export function BrowsePage({
 }: {
   entryType: EntryType;
   entries: Entry[];
+  songAmvs: Entry[];
   loading: boolean;
   error: string | null;
   activeEntryId?: string;
@@ -42,17 +44,32 @@ export function BrowsePage({
         {loading ? (
           <LoadingGrid />
         ) : (
-          <BrowseSection
-            key={entryType}
-            title={meta.title}
-            entries={entries}
-            {...optionalActiveEntryId(activeEntryId)}
-            hideHeader
-            infiniteScroll
-            showAllEntries={restoreFromHistory}
-            animateCards={!restoreFromHistory}
-            hideSeriesDurations={entryType === "series"}
-          />
+          <div class="browse-type-sections">
+            <BrowseSection
+              key={entryType}
+              title={meta.title}
+              entries={entries}
+              {...optionalActiveEntryId(activeEntryId)}
+              hideHeader
+              infiniteScroll
+              showAllEntries={restoreFromHistory}
+              animateCards={!restoreFromHistory}
+              hideSeriesDurations={entryType === "series"}
+            />
+            {!error && entryType === "song" ? (
+              <BrowseSection
+                sectionId="amvs"
+                title="AMVs"
+                titleClassName={accentClassForEntryType(entryType)}
+                entries={sortedEntriesByTitle(songAmvs)}
+                {...optionalActiveEntryId(activeEntryId)}
+                infiniteScroll
+                showAllEntries={restoreFromHistory}
+                animateCards={!restoreFromHistory}
+                compactHeader
+              />
+            ) : null}
+          </div>
         )}
       </div>
     </section>

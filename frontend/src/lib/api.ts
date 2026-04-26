@@ -8,6 +8,8 @@ function typePath(entryType: EntryType): string {
       return "shorts";
     case "shot":
       return "shots";
+    case "song":
+      return "songs";
   }
 }
 

@@ -11,6 +11,8 @@ export function entriesForType(
       return sortedEntriesByTitle(catalog.shorts);
     case "shot":
       return sortedEntriesByTitle(catalog.shots);
+    case "song":
+      return sortedEntriesByTitle(catalog.songs);
   }
 }
 
@@ -48,17 +50,24 @@ export function groupEntriesByType(
     series: entries.filter((entry) => entry.type === "series"),
     short: entries.filter((entry) => entry.type === "short"),
     shot: entries.filter((entry) => entry.type === "shot"),
+    song: entries.filter((entry) => entry.type === "song"),
   };
 }
 
-export function watchTypeLabel(entryType: EntryType): string {
-  switch (entryType) {
+export function watchTypeLabel(entry: Entry): string {
+  if (entry.subtype === "amv") {
+    return "Song / AMV";
+  }
+
+  switch (entry.type) {
     case "series":
       return "Show";
     case "short":
       return "Short";
     case "shot":
       return "One-Shot";
+    case "song":
+      return "Song";
   }
 }
 
@@ -70,6 +79,8 @@ export function accentClassForEntryType(entryType: EntryType): string {
       return "accent-shorts";
     case "shot":
       return "accent-one-shots";
+    case "song":
+      return "accent-songs";
   }
 }
 

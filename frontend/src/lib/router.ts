@@ -81,6 +81,9 @@ export function parseRoute(pathname: string): Route {
     if (parts[0] === "shots") {
       return { name: "browse", entryType: "shot" };
     }
+    if (parts[0] === "songs") {
+      return { name: "browse", entryType: "song" };
+    }
   }
 
   if (parts[0] === "creator" && parts[1]) {

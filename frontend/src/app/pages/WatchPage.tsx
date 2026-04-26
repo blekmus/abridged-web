@@ -75,6 +75,8 @@ export function WatchPage({
   const episode = chooseEpisode(entry, episodeId);
   const description = episode.description || entry.description;
   const episodeDate = formatEpisodeDate(episode.date);
+  const browsePath =
+    entry.subtype === "amv" ? "/songs#amvs" : TYPE_META[entry.type].path;
 
   return (
     <section class={`watch-page watch-page-${entry.type}`}>
@@ -106,16 +108,15 @@ export function WatchPage({
               <div class="watch-credit">
                 <p>
                   <a
-                    href={TYPE_META[entry.type].path}
+                    href={browsePath}
                     class={`watch-type-tag ${accentClassForEntryType(entry.type)}`}
                     onClick={(event) => {
-                      handleInternalLinkClick(
-                        event,
-                        TYPE_META[entry.type].path,
-                      );
+                      handleInternalLinkClick(event, browsePath, {
+                        scrollToTop: true,
+                      });
                     }}
                   >
-                    {watchTypeLabel(entry.type)}
+                    {watchTypeLabel(entry)}
                   </a>
                 </p>
                 <p>

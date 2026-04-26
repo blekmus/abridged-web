@@ -1,3 +1,4 @@
+import { Fragment } from "preact";
 import { useEffect, useState } from "preact/hooks";
 import { api } from "../../lib/api";
 import type { Entry } from "../../lib/types";
@@ -63,6 +64,44 @@ export function CreatorPage({
               const sectionEntries = groupedEntries[section.entryType];
               if (sectionEntries.length === 0) {
                 return null;
+              }
+
+              if (section.entryType === "song") {
+                const songEntries = sectionEntries.filter(
+                  (entry) => entry.subtype !== "amv",
+                );
+                const songAmvEntries = sectionEntries.filter(
+                  (entry) => entry.subtype === "amv",
+                );
+
+                return (
+                  <Fragment key={section.entryType}>
+                    {songEntries.length > 0 ? (
+                      <BrowseSection
+                        title={section.title}
+                        titleClassName={section.titleClassName}
+                        entries={songEntries}
+                        {...optionalActiveEntryId(activeEntryId)}
+                        showAllEntries
+                        animateCards={!restoreFromHistory}
+                        compactHeader
+                        hideSeriesDurations
+                      />
+                    ) : null}
+                    {songAmvEntries.length > 0 ? (
+                      <BrowseSection
+                        title="Songs / AMVs"
+                        titleClassName={section.titleClassName}
+                        entries={songAmvEntries}
+                        {...optionalActiveEntryId(activeEntryId)}
+                        showAllEntries
+                        animateCards={!restoreFromHistory}
+                        compactHeader
+                        hideSeriesDurations
+                      />
+                    ) : null}
+                  </Fragment>
+                );
               }
 
               return (

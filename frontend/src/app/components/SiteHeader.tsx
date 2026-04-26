@@ -6,6 +6,7 @@ export function SiteHeader({ currentPathname }: { currentPathname: string }) {
     { href: "/series", label: "Shows", accentClass: "accent-shows" },
     { href: "/shorts", label: "Shorts", accentClass: "accent-shorts" },
     { href: "/shots", label: "One-Shots", accentClass: "accent-one-shots" },
+    { href: "/songs", label: "Songs", accentClass: "accent-songs" },
   ];
 
   return (

@@ -4,6 +4,8 @@ export const EMPTY_CATALOG: CatalogResponse = {
   series: [],
   shorts: [],
   shots: [],
+  songs: [],
+  songAmvs: [],
 };
 
 export const TYPE_META: Record<
@@ -21,6 +23,11 @@ export const TYPE_META: Record<
     eyebrow: "Single entry stories",
     path: "/shots",
   },
+  song: {
+    title: "Songs",
+    eyebrow: "original songs & AMVs",
+    path: "/songs",
+  },
 };
 
 export const CREATOR_SECTIONS: Array<{
@@ -35,6 +42,7 @@ export const CREATOR_SECTIONS: Array<{
     title: "One-Shots",
     titleClassName: "accent-one-shots",
   },
+  { entryType: "song", title: "Songs", titleClassName: "accent-songs" },
 ];
 
 export const LOADING_CARD_KEYS = [

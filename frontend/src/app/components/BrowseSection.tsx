@@ -5,6 +5,7 @@ import { BrowseCard } from "./BrowseCard";
 import { SectionHeader } from "./SectionHeader";
 
 export function BrowseSection({
+  sectionId,
   title,
   titleHref,
   titleClassName,
@@ -18,6 +19,7 @@ export function BrowseSection({
   animateCards = true,
   hideSeriesDurations = false,
 }: {
+  sectionId?: string;
   title: string;
   titleHref?: string;
   titleClassName?: string;
@@ -76,7 +78,7 @@ export function BrowseSection({
   }, [entries.length, infiniteScroll, visibleCount]);
 
   return (
-    <section class="browse-section">
+    <section id={sectionId} class="browse-section">
       <div class="container">
         {!hideHeader ? (
           <SectionHeader

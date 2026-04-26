@@ -30,6 +30,7 @@ export function HomePage({
     { label: "shows", count: catalog.series.length },
     { label: "shorts", count: catalog.shorts.length },
     { label: "one-shots", count: catalog.shots.length },
+    { label: "songs", count: catalog.songs.length + catalog.songAmvs.length },
   ];
   const randomizedHomeEntries = getRandomizedHomeEntries(catalog);
 
@@ -67,7 +68,6 @@ export function HomePage({
 
       {!loading && (
         <>
-          <ButtonSamples />
           <BrowseSection
             title="Shows"
             titleHref="/series"
@@ -96,58 +96,19 @@ export function HomePage({
             limited
             animateCards={!restoreFromHistory}
           />
+          <BrowseSection
+            title="Songs"
+            titleHref="/songs"
+            titleClassName="accent-songs"
+            entries={randomizedHomeEntries.songs}
+            {...optionalActiveEntryId(activeEntryId)}
+            limited
+            animateCards={!restoreFromHistory}
+          />
           <HomeQuestions />
         </>
       )}
     </>
-  );
-}
-
-function ButtonSamples() {
-  return (
-    <section class="button-samples">
-      <div class="container button-samples-row">
-        <button type="button" class="sample-button sample-button-badge">
-          Badge
-        </button>
-        <button type="button" class="sample-button sample-button-fill">
-          Filled
-        </button>
-        <button type="button" class="sample-button sample-button-outline">
-          Outline
-        </button>
-        <button type="button" class="sample-button sample-button-link">
-          Minimal
-        </button>
-        <button type="button" class="sample-button sample-button-cyan">
-          Cyan CTA
-        </button>
-        <button type="button" class="sample-button sample-button-terminal">
-          Terminal
-        </button>
-        <button type="button" class="sample-button sample-button-purple">
-          Purple Panel
-        </button>
-        <button type="button" class="sample-button sample-button-tab">
-          Color Tab
-        </button>
-        <button type="button" class="sample-button sample-button-corners">
-          Corners
-        </button>
-        <button type="button" class="sample-button sample-button-paper">
-          Show More
-        </button>
-        <button type="button" class="sample-button sample-button-signal">
-          Read More
-        </button>
-        <button type="button" class="sample-button sample-button-offset">
-          Show More
-        </button>
-        <button type="button" class="sample-button sample-button-spectrum">
-          Read More
-        </button>
-      </div>
-    </section>
   );
 }
 
@@ -162,6 +123,8 @@ function getRandomizedHomeEntries(
     series: shuffledEntries(catalog.series),
     shorts: shuffledEntries(catalog.shorts),
     shots: shuffledEntries(catalog.shots),
+    songs: shuffledEntries(catalog.songs),
+    songAmvs: shuffledEntries(catalog.songAmvs),
   };
 
   cachedRandomizedHomeEntries = { source: catalog, entries };

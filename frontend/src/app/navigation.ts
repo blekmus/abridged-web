@@ -13,6 +13,13 @@ export function handleInternalLinkClick(
   event.preventDefault();
   navigate(href);
 
+  const hash = new URL(href, window.location.href).hash;
+
+  if (hash) {
+    scrollPageToHash(hash);
+    return;
+  }
+
   if (options.scrollToTop) {
     requestAnimationFrame(() => {
       scrollPageToTop();
@@ -33,6 +40,28 @@ export function scrollPageToPosition(position: {
 
   scrollingElement.scrollTo({ ...position, behavior: "auto" });
   window.scrollTo({ ...position, behavior: "auto" });
+}
+
+export function scrollPageToHash(hash: string): void {
+  const id = decodeURIComponent(hash.slice(1));
+  let attempts = 0;
+  const maxAttempts = 30;
+
+  const scroll = () => {
+    attempts += 1;
+    const target = document.getElementById(id);
+
+    if (target) {
+      target.scrollIntoView({ block: "start", behavior: "auto" });
+      return;
+    }
+
+    if (attempts < maxAttempts) {
+      requestAnimationFrame(scroll);
+    }
+  };
+
+  requestAnimationFrame(scroll);
 }
 
 function shouldUseBrowserNavigation(

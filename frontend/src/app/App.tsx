@@ -18,7 +18,7 @@ import { SiteFooter } from "./components/SiteFooter";
 import { SiteHeader } from "./components/SiteHeader";
 import { EMPTY_CATALOG } from "./constants";
 import { entriesForType } from "./entryUtils";
-import { scrollPageToPosition } from "./navigation";
+import { scrollPageToHash, scrollPageToPosition } from "./navigation";
 import { BrowsePage } from "./pages/BrowsePage";
 import { CreatorPage } from "./pages/CreatorPage";
 import { HomePage } from "./pages/HomePage";
@@ -122,6 +122,7 @@ export function App() {
   const isHistoryNavigation = navigationState.kind === "pop";
 
   useRestoreScrollOnHistoryNavigation(navigationState);
+  useScrollToHashTarget(navigationState, catalogState.loading);
 
   return (
     <div class="page-shell">
@@ -141,6 +142,7 @@ export function App() {
             key={route.entryType}
             entryType={route.entryType}
             entries={entriesForType(catalog, route.entryType)}
+            songAmvs={catalog.songAmvs}
             loading={catalogState.loading}
             error={catalogState.error}
             restoreFromHistory={isHistoryNavigation}
@@ -166,6 +168,19 @@ export function App() {
       <SiteFooter />
     </div>
   );
+}
+
+function useScrollToHashTarget(
+  navigationState: NavigationState,
+  loading: boolean,
+): void {
+  useLayoutEffect(() => {
+    if (navigationState.kind === "pop" || loading || !window.location.hash) {
+      return;
+    }
+
+    scrollPageToHash(window.location.hash);
+  }, [navigationState, loading]);
 }
 
 function useRestoreScrollOnHistoryNavigation(

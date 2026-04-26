@@ -1,4 +1,5 @@
-export type EntryType = "series" | "short" | "shot";
+export type EntryType = "series" | "short" | "shot" | "song";
+export type EntrySubtype = "amv";
 
 export type Episode = {
   id: string;
@@ -20,6 +21,7 @@ export type Episode = {
 export type Entry = {
   id: string;
   type: EntryType;
+  subtype?: EntrySubtype;
   creator: string;
   creatorSlug: string;
   entryTitle: string;
@@ -33,4 +35,6 @@ export type CatalogResponse = {
   series: Entry[];
   shorts: Entry[];
   shots: Entry[];
+  songs: Entry[];
+  songAmvs: Entry[];
 };
