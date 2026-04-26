@@ -79,11 +79,9 @@ export function WatchPage({
   return (
     <section class={`watch-page watch-page-${entry.type}`}>
       <div class="container watch-container">
-        {entry.type === "series" ? (
-          <div class="watch-intro">
-            <h1 class="watch-entry-title">{entry.entryTitle}</h1>
-          </div>
-        ) : null}
+        <div class="watch-intro">
+          <h1 class="watch-entry-title">{entry.entryTitle}</h1>
+        </div>
 
         <div class="player-shell">
           <video
@@ -98,9 +96,13 @@ export function WatchPage({
         <div class="watch-layout">
           <div class="watch-main">
             <div class="metadata-block">
-              <p class="video-title">
-                {episode.displayTitle || episode.videoTitle}
-              </p>
+              {entry.type === "series" ? (
+                <p class="video-title">
+                  {episode.displayTitle || episode.videoTitle}
+                </p>
+              ) : (
+                ""
+              )}
               <div class="watch-credit">
                 <p>
                   <a

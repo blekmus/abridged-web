@@ -50,10 +50,9 @@ export function CreatorPage({
   return (
     <section class="browse-page">
       <div class="container">
-        <p class="eyebrow">Creator catalog</p>
         <header class="creator-header">
           <h1 class="creator-title">{title}</h1>
-          <p class="creator-count">{state.data?.length ?? 0} titles</p>
+          <p class="eyebrow">Creator catalog</p>
         </header>
         {state.error ? <InlineError message={state.error} /> : null}
         {state.loading ? (

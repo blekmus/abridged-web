@@ -23,13 +23,19 @@ export function BrowsePage({
   restoreFromHistory: boolean;
 }) {
   const meta = TYPE_META[entryType];
+  const entryCountLabel = loading
+    ? "Loading entries"
+    : `${entries.length} ${entries.length === 1 ? "title" : "titles"}`;
 
   return (
     <section class="browse-page">
       <div class="container">
-        <p class="eyebrow">{meta.eyebrow}</p>
+        <div class="browse-type-header">
+          <h1 class="browse-type-title">{meta.title}</h1>
+          <p class="eyebrow">{meta.eyebrow}</p>
+        </div>
         <SectionHeader
-          title={meta.title}
+          title={entryCountLabel}
           className={accentClassForEntryType(entryType)}
         />
         {error ? <InlineError message={error} /> : null}

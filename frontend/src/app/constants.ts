@@ -13,11 +13,11 @@ export const TYPE_META: Record<
   series: { title: "Shows", eyebrow: "Multi-episode runs", path: "/series" },
   short: {
     title: "Shorts",
-    eyebrow: "Edits with practically no plot",
+    eyebrow: "Titles with a mildy coherent plot",
     path: "/shorts",
   },
   shot: {
-    title: "Shots",
+    title: "One-Shots",
     eyebrow: "Single entry stories",
     path: "/shots",
   },
