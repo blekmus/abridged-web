@@ -259,16 +259,12 @@ video {
 }
 
 .nav-link:hover {
-  border-color: color-mix(
-    in srgb,
-    var(--accent, var(--color-accent)) 58%,
-    rgba(216, 208, 196, 0.18)
-  );
+  border-color: color-mix(in srgb, var(--accent) 42%, #000);
   background: color-mix(in srgb, var(--accent, var(--color-accent)) 8%, #0a0a0a);
 }
 
 .nav-link.is-active {
-  border-color: var(--accent, var(--color-accent));
+  border-color: color-mix(in srgb, var(--accent) 42%, #000);
   background: color-mix(in srgb, var(--accent, var(--color-accent)) 4%, #0a0a0a);
   color: var(--accent, var(--color-title));
 }
@@ -452,7 +448,7 @@ video {
 .section-title-link.accent-shorts:focus-visible,
 .section-title-link.accent-songs:hover,
 .section-title-link.accent-songs:focus-visible {
-  border-color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 42%, #000);
   background: color-mix(in srgb, var(--accent) 10%, #0a0a0a);
 }
 
@@ -875,6 +871,7 @@ video {
 }
 
 .player-shell {
+  border-radius: 5px;
   position: relative;
   overflow: hidden;
   border: 1px solid var(--color-border);
@@ -984,7 +981,7 @@ video {
 
 .watch-type-tag:hover,
 .watch-type-tag:focus-visible {
-  border-color: var(--accent, var(--color-accent));
+  border-color: color-mix(in srgb, var(--accent) 42%, #000);
   color: var(--color-title);
 }
 

@@ -19,7 +19,7 @@ export function SectionHeader({
             href={href}
             class={`section-title-link ${className ?? ""}`}
             onClick={(event) => {
-              handleInternalLinkClick(event, href);
+              handleInternalLinkClick(event, href, { scrollToTop: true });
             }}
           >
             {title}
