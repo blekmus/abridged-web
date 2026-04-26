@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -73,13 +72,6 @@ type videoMetadata struct {
 	DurationSeconds int
 }
 
-type ffprobeFormatPayload struct {
-	Format struct {
-		Duration string            `json:"duration"`
-		Tags     map[string]string `json:"tags"`
-	} `json:"format"`
-}
-
 type cachedVideoMetadata struct {
 	Size            int64  `json:"size"`
 	ModTimeUnixNano int64  `json:"modTimeUnixNano"`
@@ -97,8 +89,6 @@ type videoMetadataCache struct {
 	root  string
 	path  string
 	items map[string]cachedVideoMetadata
-	seen  map[string]struct{}
-	dirty bool
 }
 
 type CatalogResponse struct {
@@ -162,13 +152,6 @@ func Load(root string) (*Library, error) {
 				return nil, scanErr
 			}
 			lib.registerEntries(category.kind, amvs)
-		}
-	}
-
-	if lib.metadata != nil {
-		lib.metadata.PruneMissing()
-		if err := lib.metadata.Save(); err != nil {
-			return nil, fmt.Errorf("save video metadata cache: %w", err)
 		}
 	}
 
@@ -574,7 +557,6 @@ func newVideoMetadataCache(root string) *videoMetadataCache {
 		root:  root,
 		path:  filepath.Join(root, videoMetadataCacheFilename),
 		items: map[string]cachedVideoMetadata{},
-		seen:  map[string]struct{}{},
 	}
 	cache.load()
 	return cache
@@ -604,63 +586,11 @@ func (c *videoMetadataCache) Read(videoPath string) videoMetadata {
 	}
 
 	key := c.key(videoPath)
-	c.seen[key] = struct{}{}
-
 	if cached, ok := c.items[key]; ok && cached.matches(info) {
 		return cached.metadata()
 	}
 
-	metadata, ok := probeVideoMetadata(videoPath)
-	if !ok {
-		return videoMetadata{}
-	}
-
-	c.items[key] = cachedVideoMetadata{
-		Size:            info.Size(),
-		ModTimeUnixNano: info.ModTime().UnixNano(),
-		Description:     metadata.Description,
-		Date:            metadata.Date,
-		DurationSeconds: metadata.DurationSeconds,
-	}
-	c.dirty = true
-
-	return metadata
-}
-
-func (c *videoMetadataCache) PruneMissing() {
-	for key := range c.items {
-		if _, ok := c.seen[key]; ok {
-			continue
-		}
-		delete(c.items, key)
-		c.dirty = true
-	}
-}
-
-func (c *videoMetadataCache) Save() error {
-	if !c.dirty {
-		return nil
-	}
-
-	data, err := json.MarshalIndent(videoMetadataCacheFile{
-		Version: videoMetadataCacheVersion,
-		Items:   c.items,
-	}, "", "  ")
-	if err != nil {
-		return err
-	}
-
-	tempPath := c.path + ".tmp"
-	if err := os.WriteFile(tempPath, data, 0o644); err != nil {
-		return err
-	}
-	if err := os.Rename(tempPath, c.path); err != nil {
-		_ = os.Remove(tempPath)
-		return err
-	}
-
-	c.dirty = false
-	return nil
+	return videoMetadata{}
 }
 
 func (c *videoMetadataCache) key(videoPath string) string {
@@ -688,52 +618,6 @@ func (l *Library) readVideoMetadata(videoPath string) videoMetadata {
 		return videoMetadata{}
 	}
 	return l.metadata.Read(videoPath)
-}
-
-func probeVideoMetadata(videoPath string) (videoMetadata, bool) {
-	output, err := exec.Command(
-		"ffprobe",
-		"-v",
-		"error",
-		"-print_format",
-		"json",
-		"-show_format",
-		videoPath,
-	).Output()
-	if err != nil {
-		return videoMetadata{}, false
-	}
-
-	var payload ffprobeFormatPayload
-	if err := json.Unmarshal(output, &payload); err != nil {
-		return videoMetadata{}, false
-	}
-
-	durationSeconds := 0
-	if duration, err := strconv.ParseFloat(payload.Format.Duration, 64); err == nil {
-		durationSeconds = int(duration)
-	}
-
-	return videoMetadata{
-		Description:     firstMetadataTag(payload.Format.Tags, "description", "synopsis"),
-		Date:            firstMetadataTag(payload.Format.Tags, "date"),
-		DurationSeconds: durationSeconds,
-	}, true
-}
-
-func firstMetadataTag(tags map[string]string, names ...string) string {
-	if len(tags) == 0 {
-		return ""
-	}
-
-	for _, name := range names {
-		value := strings.TrimSpace(tags[name])
-		if value != "" {
-			return value
-		}
-	}
-
-	return ""
 }
 
 func firstSubtype(subtypes []EntrySubtype) EntrySubtype {
