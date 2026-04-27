@@ -138,7 +138,14 @@ func (s *appServer) handleThumb(c *gin.Context) {
 		return
 	}
 
-	data, err := os.ReadFile(asset.ThumbnailPath)
+	file, err := os.Open(asset.ThumbnailPath)
+	if err != nil {
+		c.String(http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer file.Close()
+
+	info, err := file.Stat()
 	if err != nil {
 		c.String(http.StatusInternalServerError, err.Error())
 		return
@@ -149,8 +156,9 @@ func (s *appServer) handleThumb(c *gin.Context) {
 		contentType = "application/octet-stream"
 	}
 
-	c.Header("Cache-Control", "public, max-age=3600")
-	c.Data(http.StatusOK, contentType, data)
+	c.Header("Cache-Control", "public, max-age=31536000, immutable")
+	c.Header("Content-Type", contentType)
+	http.ServeContent(c.Writer, c.Request, filepath.Base(asset.ThumbnailPath), info.ModTime(), file)
 }
 
 type spaHandler struct {
