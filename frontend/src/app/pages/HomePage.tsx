@@ -57,8 +57,9 @@ export function HomePage({
           </div>
 
           <p class="hero-copy">
-            A heavily curated catalogue of my favourite abridged anime. Most of
-            them are from youtube, where they have been banished to the aether.
+            A catalogue of my favourite abridged anime. Most of them are from
+            YouTube, where they have been banished to the aether. This is more
+            of an awareness effort than a full blown archive.
           </p>
         </div>
       </section>

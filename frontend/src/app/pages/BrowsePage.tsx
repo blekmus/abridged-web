@@ -1,4 +1,4 @@
-import type { Entry, EntryType } from "../../lib/types";
+import type { EntrySummary, EntryType } from "../../lib/types";
 import { BrowseSection } from "../components/BrowseSection";
 import { InlineError } from "../components/InlineError";
 import { LoadingGrid } from "../components/LoadingGrid";
@@ -17,8 +17,8 @@ export function BrowsePage({
   restoreFromHistory,
 }: {
   entryType: EntryType;
-  entries: Entry[];
-  songAmvs: Entry[];
+  entries: EntrySummary[];
+  songAmvs: EntrySummary[];
   loading: boolean;
   error: string | null;
   activeEntryId?: string;

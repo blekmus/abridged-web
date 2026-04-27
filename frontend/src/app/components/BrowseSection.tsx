@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "preact/hooks";
-import type { Entry } from "../../lib/types";
+import type { EntrySummary } from "../../lib/types";
 import { handleInternalLinkClick } from "../navigation";
 import { BrowseCard } from "./BrowseCard";
 import { SectionHeader } from "./SectionHeader";
@@ -23,7 +23,7 @@ export function BrowseSection({
   title: string;
   titleHref?: string;
   titleClassName?: string;
-  entries: Entry[];
+  entries: EntrySummary[];
   activeEntryId?: string;
   limited?: boolean;
   hideHeader?: boolean;

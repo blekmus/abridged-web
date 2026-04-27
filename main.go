@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"strings"
@@ -15,9 +16,12 @@ func main() {
 	appEnv := strings.ToLower(envOr("APP_ENV", "development"))
 	serveFromDisk := appEnv == "development"
 
+	log.Printf("starting abridged-web (archive=%s env=%s port=%s)", archiveRoot, appEnv, port)
+
 	library, err := catalog.Load(archiveRoot)
 	if err != nil {
-		log.Fatalf("load archive: %v", err)
+		fmt.Fprintln(os.Stdout, err)
+		os.Exit(1)
 	}
 
 	router, err := server.NewRouter(library, server.Options{

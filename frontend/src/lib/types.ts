@@ -18,6 +18,13 @@ export type Episode = {
   hasThumbnail: boolean;
 };
 
+export type EpisodeCard = {
+  id: string;
+  durationSeconds: number;
+  thumbnailUrl?: string;
+  hasThumbnail: boolean;
+};
+
 export type Entry = {
   id: string;
   type: EntryType;
@@ -31,10 +38,21 @@ export type Entry = {
   episodes: Episode[];
 };
 
+export type EntrySummary = {
+  id: string;
+  type: EntryType;
+  subtype?: EntrySubtype;
+  creator: string;
+  creatorSlug: string;
+  entryTitle: string;
+  posterEpisodeId: string;
+  poster: EpisodeCard;
+};
+
 export type CatalogResponse = {
-  series: Entry[];
-  shorts: Entry[];
-  shots: Entry[];
-  songs: Entry[];
-  songAmvs: Entry[];
+  series: EntrySummary[];
+  shorts: EntrySummary[];
+  shots: EntrySummary[];
+  songs: EntrySummary[];
+  songAmvs: EntrySummary[];
 };

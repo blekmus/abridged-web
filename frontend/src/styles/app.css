@@ -526,7 +526,17 @@ video {
 .thumb {
   height: 100%;
   object-fit: cover;
+  opacity: 1;
   transition: filter 120ms ease;
+}
+
+.thumb:not(.is-loaded):not(.thumb-fallback) {
+  opacity: 0;
+}
+
+.thumb-loading {
+  position: absolute;
+  inset: 0;
 }
 
 .thumb-duration {
@@ -1026,6 +1036,53 @@ video {
   display: inline-flex;
   align-items: center;
   margin: 0 0 var(--space-6);
+}
+
+.watch-page-skeleton .loading-line {
+  max-width: 100%;
+}
+
+.watch-skeleton-entry-title {
+  width: min(42rem, 74%);
+  height: clamp(46px, 8vw, 96px);
+}
+
+.watch-skeleton-metadata {
+  gap: var(--space-5);
+}
+
+.watch-skeleton-video-title {
+  width: min(32rem, 100%);
+  height: 2.7rem;
+}
+
+.watch-skeleton-credit {
+  align-items: center;
+}
+
+.watch-skeleton-tag {
+  width: 6.2rem;
+  height: 30px;
+}
+
+.watch-skeleton-credit-line {
+  width: min(18rem, 100%);
+}
+
+.watch-skeleton-date-line {
+  width: min(13rem, 100%);
+}
+
+.watch-skeleton-description {
+  display: grid;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+}
+
+.watch-skeleton-section-title {
+  width: 8rem;
+  height: 1.4rem;
+  margin-bottom: var(--space-6);
 }
 
 .description-copy {

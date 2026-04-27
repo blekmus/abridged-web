@@ -1,7 +1,9 @@
-import type { Entry } from "../../lib/types";
+import type { Entry, EntrySummary, EpisodeCard } from "../../lib/types";
 import { findPosterEpisode } from "../entryUtils";
 import { handleInternalLinkClick } from "../navigation";
 import { Thumbnail } from "./Thumbnail";
+
+type BrowseCardEntry = EntrySummary | Entry;
 
 export function BrowseCard({
   entry,
@@ -10,13 +12,13 @@ export function BrowseCard({
   animationDelay,
   hideDuration = false,
 }: {
-  entry: Entry;
+  entry: BrowseCardEntry;
   active: boolean;
   animate: boolean;
   animationDelay: number;
   hideDuration?: boolean;
 }) {
-  const poster = findPosterEpisode(entry);
+  const poster = posterForEntry(entry);
 
   return (
     <article
@@ -62,4 +64,12 @@ export function BrowseCard({
       </div>
     </article>
   );
+}
+
+function posterForEntry(entry: BrowseCardEntry): EpisodeCard {
+  if ("poster" in entry) {
+    return entry.poster;
+  }
+
+  return findPosterEpisode(entry);
 }

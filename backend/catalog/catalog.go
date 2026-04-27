@@ -42,6 +42,24 @@ type Entry struct {
 	Episodes         []Episode    `json:"episodes"`
 }
 
+type EntrySummary struct {
+	ID              string       `json:"id"`
+	Type            EntryType    `json:"type"`
+	Subtype         EntrySubtype `json:"subtype,omitempty"`
+	Creator         string       `json:"creator"`
+	CreatorSlug     string       `json:"creatorSlug"`
+	EntryTitle      string       `json:"entryTitle"`
+	PosterEpisodeID string       `json:"posterEpisodeId"`
+	Poster          EpisodeCard  `json:"poster"`
+}
+
+type EpisodeCard struct {
+	ID              string `json:"id"`
+	DurationSeconds int    `json:"durationSeconds"`
+	ThumbnailURL    string `json:"thumbnailUrl,omitempty"`
+	HasThumbnail    bool   `json:"hasThumbnail"`
+}
+
 type Episode struct {
 	ID              string `json:"id"`
 	EntryID         string `json:"entryId"`
@@ -92,11 +110,11 @@ type videoMetadataCache struct {
 }
 
 type CatalogResponse struct {
-	Series   []Entry `json:"series"`
-	Shorts   []Entry `json:"shorts"`
-	Shots    []Entry `json:"shots"`
-	Songs    []Entry `json:"songs"`
-	SongAMVs []Entry `json:"songAmvs"`
+	Series   []EntrySummary `json:"series"`
+	Shorts   []EntrySummary `json:"shorts"`
+	Shots    []EntrySummary `json:"shots"`
+	Songs    []EntrySummary `json:"songs"`
+	SongAMVs []EntrySummary `json:"songAmvs"`
 }
 
 type Library struct {
@@ -119,10 +137,18 @@ func Load(root string) (*Library, error) {
 	if err != nil {
 		return nil, fmt.Errorf("resolve archive root: %w", err)
 	}
+	if err := validateArchiveRoot(absRoot); err != nil {
+		return nil, err
+	}
+
+	metadata, err := newVideoMetadataCache(absRoot)
+	if err != nil {
+		return nil, err
+	}
 
 	lib := &Library{
 		root:          absRoot,
-		metadata:      newVideoMetadataCache(absRoot),
+		metadata:      metadata,
 		byType:        map[EntryType][]Entry{},
 		byEntryID:     map[string]Entry{},
 		byEpisodeID:   map[string]EpisodeAsset{},
@@ -158,22 +184,36 @@ func Load(root string) (*Library, error) {
 	return lib, nil
 }
 
+func validateArchiveRoot(root string) error {
+	info, err := os.Stat(root)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("archive path does not exist: %s", root)
+		}
+		return fmt.Errorf("read archive path %s: %w", root, err)
+	}
+	if !info.IsDir() {
+		return fmt.Errorf("archive path is not a directory: %s", root)
+	}
+	return nil
+}
+
 func (l *Library) CatalogResponse() CatalogResponse {
 	return CatalogResponse{
-		Series:   cloneEntries(l.byType[EntryTypeSeries]),
-		Shorts:   cloneEntries(l.byType[EntryTypeShort]),
-		Shots:    cloneEntries(l.byType[EntryTypeShot]),
-		Songs:    cloneEntries(entriesWithSubtype(l.byType[EntryTypeSong], "")),
-		SongAMVs: cloneEntries(entriesWithSubtype(l.byType[EntryTypeSong], EntrySubtypeAMV)),
+		Series:   entrySummaries(l.byType[EntryTypeSeries]),
+		Shorts:   entrySummaries(l.byType[EntryTypeShort]),
+		Shots:    entrySummaries(l.byType[EntryTypeShot]),
+		Songs:    entrySummaries(entriesWithSubtype(l.byType[EntryTypeSong], "")),
+		SongAMVs: entrySummaries(entriesWithSubtype(l.byType[EntryTypeSong], EntrySubtypeAMV)),
 	}
 }
 
-func (l *Library) EntriesForType(entryType EntryType) []Entry {
-	return cloneEntries(l.byType[entryType])
+func (l *Library) EntriesForType(entryType EntryType) []EntrySummary {
+	return entrySummaries(l.byType[entryType])
 }
 
-func (l *Library) EntriesForCreator(slug string) []Entry {
-	return cloneEntries(l.byCreatorSlug[slug])
+func (l *Library) EntriesForCreator(slug string) []EntrySummary {
+	return entrySummaries(l.byCreatorSlug[slug])
 }
 
 func (l *Library) Entry(entryID string) (Entry, bool) {
@@ -552,31 +592,37 @@ const (
 	videoMetadataCacheFilename = ".abridged-video-metadata.json"
 )
 
-func newVideoMetadataCache(root string) *videoMetadataCache {
+func newVideoMetadataCache(root string) (*videoMetadataCache, error) {
 	cache := &videoMetadataCache{
 		root:  root,
 		path:  filepath.Join(root, videoMetadataCacheFilename),
 		items: map[string]cachedVideoMetadata{},
 	}
-	cache.load()
-	return cache
+	if err := cache.load(); err != nil {
+		return nil, err
+	}
+	return cache, nil
 }
 
-func (c *videoMetadataCache) load() {
+func (c *videoMetadataCache) load() error {
 	data, err := os.ReadFile(c.path)
 	if err != nil {
-		return
+		if os.IsNotExist(err) {
+			return fmt.Errorf("metadata file with the following path does not exist: %s", c.path)
+		}
+		return fmt.Errorf("read metadata file %s: %w", c.path, err)
 	}
 
 	var payload videoMetadataCacheFile
 	if err := json.Unmarshal(data, &payload); err != nil {
-		return
+		return fmt.Errorf("read metadata file %s: %w", c.path, err)
 	}
 	if payload.Version != videoMetadataCacheVersion || payload.Items == nil {
-		return
+		return fmt.Errorf("metadata file %s is not a valid cache file", c.path)
 	}
 
 	c.items = payload.Items
+	return nil
 }
 
 func (c *videoMetadataCache) Read(videoPath string) videoMetadata {
@@ -672,4 +718,46 @@ func cloneEntries(entries []Entry) []Entry {
 		cloned[i].Episodes = append([]Episode(nil), entry.Episodes...)
 	}
 	return cloned
+}
+
+func entrySummaries(entries []Entry) []EntrySummary {
+	summaries := make([]EntrySummary, 0, len(entries))
+	for _, entry := range entries {
+		summaries = append(summaries, entrySummary(entry))
+	}
+	return summaries
+}
+
+func entrySummary(entry Entry) EntrySummary {
+	poster := EpisodeCard{}
+	for _, episode := range entry.Episodes {
+		if episode.ID != entry.PosterEpisodeID {
+			continue
+		}
+		poster = episodeCard(episode)
+		break
+	}
+	if poster.ID == "" && len(entry.Episodes) > 0 {
+		poster = episodeCard(entry.Episodes[0])
+	}
+
+	return EntrySummary{
+		ID:              entry.ID,
+		Type:            entry.Type,
+		Subtype:         entry.Subtype,
+		Creator:         entry.Creator,
+		CreatorSlug:     entry.CreatorSlug,
+		EntryTitle:      entry.EntryTitle,
+		PosterEpisodeID: entry.PosterEpisodeID,
+		Poster:          poster,
+	}
+}
+
+func episodeCard(episode Episode) EpisodeCard {
+	return EpisodeCard{
+		ID:              episode.ID,
+		DurationSeconds: episode.DurationSeconds,
+		ThumbnailURL:    episode.ThumbnailURL,
+		HasThumbnail:    episode.HasThumbnail,
+	}
 }

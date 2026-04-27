@@ -1,7 +1,7 @@
 import { Fragment } from "preact";
 import { useEffect, useState } from "preact/hooks";
 import { api } from "../../lib/api";
-import type { Entry } from "../../lib/types";
+import type { EntrySummary } from "../../lib/types";
 import { BrowseSection } from "../components/BrowseSection";
 import { InlineError } from "../components/InlineError";
 import { LoadingGrid } from "../components/LoadingGrid";
@@ -19,7 +19,7 @@ export function CreatorPage({
   restoreFromHistory: boolean;
   activeEntryId?: string;
 }) {
-  const [state, setState] = useState<AsyncState<Entry[]>>({
+  const [state, setState] = useState<AsyncState<EntrySummary[]>>({
     data: null,
     loading: true,
     error: null,

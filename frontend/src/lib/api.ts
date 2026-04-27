@@ -1,4 +1,4 @@
-import type { CatalogResponse, Entry, EntryType } from "./types";
+import type { CatalogResponse, Entry, EntrySummary, EntryType } from "./types";
 
 function typePath(entryType: EntryType): string {
   switch (entryType) {
@@ -28,15 +28,15 @@ export const api = {
     return readJSON<CatalogResponse>("/api/catalog");
   },
 
-  fetchBrowse(entryType: EntryType): Promise<Entry[]> {
-    return readJSON<Entry[]>(`/api/${typePath(entryType)}`);
+  fetchBrowse(entryType: EntryType): Promise<EntrySummary[]> {
+    return readJSON<EntrySummary[]>(`/api/${typePath(entryType)}`);
   },
 
   fetchEntry(entryId: string): Promise<Entry> {
     return readJSON<Entry>(`/api/entry/${entryId}`);
   },
 
-  fetchCreator(creatorSlug: string): Promise<Entry[]> {
-    return readJSON<Entry[]>(`/api/creator/${creatorSlug}`);
+  fetchCreator(creatorSlug: string): Promise<EntrySummary[]> {
+    return readJSON<EntrySummary[]>(`/api/creator/${creatorSlug}`);
   },
 };

@@ -13,7 +13,7 @@ import {
   parseRoute,
   saveCurrentScrollPosition,
 } from "../lib/router";
-import type { CatalogResponse } from "../lib/types";
+import type { CatalogResponse, EntryType } from "../lib/types";
 import { SiteFooter } from "./components/SiteFooter";
 import { SiteHeader } from "./components/SiteHeader";
 import { EMPTY_CATALOG } from "./constants";
@@ -119,6 +119,9 @@ export function App() {
   const route = useMemo(() => parseRoute(pathname), [pathname]);
   const catalog = catalogState.data ?? EMPTY_CATALOG;
   const activeWatchEntryId = route.name === "watch" ? route.entryId : undefined;
+  const activeWatchEntryType = activeWatchEntryId
+    ? entryTypeForId(catalog, activeWatchEntryId)
+    : undefined;
   const isHistoryNavigation = navigationState.kind === "pop";
 
   useRestoreScrollOnHistoryNavigation(navigationState);
@@ -159,6 +162,7 @@ export function App() {
         {route.name === "watch" && (
           <WatchPage
             entryId={route.entryId}
+            entryTypeHint={activeWatchEntryType}
             restoreFromHistory={isHistoryNavigation}
             {...optionalEpisodeId(route.episodeId)}
           />
@@ -168,6 +172,25 @@ export function App() {
       <SiteFooter />
     </div>
   );
+}
+
+function entryTypeForId(
+  catalog: CatalogResponse,
+  entryId: string,
+): EntryType | undefined {
+  for (const entry of [
+    ...catalog.series,
+    ...catalog.shorts,
+    ...catalog.shots,
+    ...catalog.songs,
+    ...catalog.songAmvs,
+  ]) {
+    if (entry.id === entryId) {
+      return entry.type;
+    }
+  }
+
+  return undefined;
 }
 
 function useScrollToHashTarget(

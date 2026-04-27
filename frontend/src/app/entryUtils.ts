@@ -1,9 +1,15 @@
-import type { CatalogResponse, Entry, EntryType, Episode } from "../lib/types";
+import type {
+  CatalogResponse,
+  Entry,
+  EntrySummary,
+  EntryType,
+  Episode,
+} from "../lib/types";
 
 export function entriesForType(
   catalog: CatalogResponse,
   entryType: EntryType,
-): Entry[] {
+): EntrySummary[] {
   switch (entryType) {
     case "series":
       return sortedEntriesByTitle(catalog.series);
@@ -16,7 +22,9 @@ export function entriesForType(
   }
 }
 
-export function sortedEntriesByTitle(entries: Entry[]): Entry[] {
+export function sortedEntriesByTitle<T extends EntrySummary>(
+  entries: T[],
+): T[] {
   return [...entries].sort((leftEntry, rightEntry) =>
     leftEntry.entryTitle.localeCompare(rightEntry.entryTitle, undefined, {
       sensitivity: "base",
@@ -24,7 +32,7 @@ export function sortedEntriesByTitle(entries: Entry[]): Entry[] {
   );
 }
 
-export function shuffledEntries(entries: Entry[]): Entry[] {
+export function shuffledEntries<T>(entries: T[]): T[] {
   const shuffled = [...entries];
 
   for (let index = shuffled.length - 1; index > 0; index -= 1) {
@@ -44,8 +52,8 @@ export function shuffledEntries(entries: Entry[]): Entry[] {
 }
 
 export function groupEntriesByType(
-  entries: Entry[],
-): Record<EntryType, Entry[]> {
+  entries: EntrySummary[],
+): Record<EntryType, EntrySummary[]> {
   return {
     series: entries.filter((entry) => entry.type === "series"),
     short: entries.filter((entry) => entry.type === "short"),
