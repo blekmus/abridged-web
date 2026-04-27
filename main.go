@@ -32,7 +32,7 @@ func main() {
 		log.Fatalf("create router: %v", err)
 	}
 
-	log.Printf("abridged-web listening on http://localhost:%s (archive=%s env=%s)", port, archiveRoot, appEnv)
+	log.Printf("abridged-web listening on :%s (archive=%s env=%s)", port, archiveRoot, appEnv)
 	if err := router.Run(":" + port); err != nil {
 		log.Fatalf("listen: %v", err)
 	}

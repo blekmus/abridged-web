@@ -2,7 +2,7 @@
 
 ## Development
 
-Run the frontend dev server and backend seperately in two different terminals:
+Run the frontend dev server and backend separately in two different terminals:
 
 ```sh
 bun run dev
@@ -34,6 +34,49 @@ Example:
 ```sh
 PORT=3000 ARCHIVE_ROOT=/path/to/archive ./abridged
 ```
+
+## Docker Deployment
+
+The repo includes a multi-stage `Dockerfile` that builds the Vite frontend and embeds it into the Go binary.
+
+Build locally:
+
+```sh
+docker build -t abridged-web .
+```
+
+Run locally:
+
+```sh
+docker run --rm -p 8080:8080 \
+  -e ARCHIVE_ROOT=/archive \
+  -v /path/to/archive:/archive:ro \
+  abridged-web
+```
+
+The container runs as UID/GID `10001`, so the mounted archive directory and
+`.abridged-video-metadata.json` must be readable by that user. The image also
+includes a `/healthz` endpoint and Docker healthcheck.
+
+### GitHub Container Registry
+
+The workflow at `.github/workflows/docker-image.yml` builds the Docker image on
+pull requests and publishes `linux/amd64` and `linux/arm64` images to GitHub
+Container Registry on pushes to `main` and `v*` tags.
+
+After pushing the repo to GitHub, the image will be published as:
+
+```text
+ghcr.io/<github-owner>/<repo-name>:latest
+```
+
+For Dockge or Docker Compose, start from `deploy/compose.ghcr.yml` and replace the image name with your published GHCR image:
+
+```yaml
+image: ghcr.io/<github-owner>/<repo-name>:latest
+```
+
+Then redeploy from Dockge after each successful workflow run.
 
 ## Features
 

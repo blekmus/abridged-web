@@ -30,8 +30,9 @@ func NewRouter(library *catalog.Library, options Options) (*gin.Engine, error) {
 
 	server := &appServer{library: library}
 	router := gin.New()
-	router.Use(gin.Logger(), gin.Recovery())
+	router.Use(gin.LoggerWithConfig(gin.LoggerConfig{SkipPaths: []string{"/healthz"}}), gin.Recovery())
 
+	router.GET("/healthz", server.handleHealth)
 	router.GET("/api/catalog", server.handleCatalog)
 	router.GET("/api/series", server.handleSeries)
 	router.GET("/api/shorts", server.handleShorts)
@@ -46,9 +47,16 @@ func NewRouter(library *catalog.Library, options Options) (*gin.Engine, error) {
 	if err != nil {
 		return nil, err
 	}
-	router.NoRoute(gin.WrapH(appHandler))
+	router.NoRoute(func(c *gin.Context) {
+		c.Status(http.StatusOK)
+		appHandler.ServeHTTP(c.Writer, c.Request)
+	})
 
 	return router, nil
+}
+
+func (s *appServer) handleHealth(c *gin.Context) {
+	c.Status(http.StatusNoContent)
 }
 
 func (s *appServer) handleCatalog(c *gin.Context) {

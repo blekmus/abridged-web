@@ -1,0 +1,21 @@
+services:
+  abridged:
+    image: ghcr.io/YOUR_GITHUB_USERNAME/YOUR_REPO_NAME:latest
+    container_name: abridged
+    pull_policy: always
+    restart: unless-stopped
+    environment:
+      APP_ENV: production
+      PORT: "8080"
+      ARCHIVE_ROOT: /archive
+    volumes:
+      - /srv/abridged/archive:/archive:ro
+    ports:
+      - "8080:8080"
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
