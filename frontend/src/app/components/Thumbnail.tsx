@@ -22,7 +22,7 @@ export function Thumbnail({
           <img
             class="thumb"
             src={episode.thumbnailUrl}
-            // alt={`${title} thumbnail`}
+            aria-label={`${title} thumbnail`}
             loading="lazy"
             decoding="async"
             onLoad={(event) => {
