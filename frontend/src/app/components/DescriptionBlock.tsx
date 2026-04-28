@@ -50,7 +50,7 @@ export function DescriptionBlock({ text }: { text: string }) {
   return (
     <section class="description-section">
       <h2 class="watch-section-title">
-        <span>Youtube Description</span>
+        <span>Description</span>
       </h2>
       <div class="description-block">
         <div

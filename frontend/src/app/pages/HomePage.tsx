@@ -57,9 +57,8 @@ export function HomePage({
           </div>
 
           <p class="hero-copy">
-            A catalogue of my favourite abridged anime. Most of them are from
-            YouTube, where they have been banished to the aether. This is more
-            of an awareness effort than a full blown archive.
+            A catalogue of my favourite abridged anime now in web form. This is
+            more of an awareness effort than a full blown archive.
           </p>
         </div>
       </section>
@@ -190,7 +189,7 @@ function HomeQuestions() {
         <p>
           As much as I want to include every abridgedment out there, I'm limited
           by how much storage I have on my server. So I decided to not host the
-          big titles that are already on youtube.
+          big titles that are already easily accessible.
         </p>
       ),
     },
