@@ -1,4 +1,4 @@
-import { render } from "preact";
+import { hydrate, render } from "preact";
 import { App } from "./App";
 import "../styles/app.css";
 
@@ -8,4 +8,8 @@ if (!root) {
   throw new Error("App root not found");
 }
 
-render(<App />, root);
+if (root.children.length > 0) {
+  hydrate(<App />, root);
+} else {
+  render(<App />, root);
+}

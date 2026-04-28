@@ -219,6 +219,8 @@ func (h *spaHandler) serveIndex(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	body := strings.Replace(string(data), "<!--app-shell-->", appShellForPath(r.URL.Path), 1)
+
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	_, _ = w.Write(data)
+	_, _ = w.Write([]byte(body))
 }

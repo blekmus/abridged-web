@@ -524,19 +524,52 @@ video {
 }
 
 .thumb {
+  position: relative;
+  z-index: 1;
   height: 100%;
   object-fit: cover;
   opacity: 1;
   transition: filter 120ms ease;
 }
 
-.thumb:not(.is-loaded):not(.thumb-fallback) {
+img.thumb {
   opacity: 0;
+  transition: opacity 180ms ease;
+}
+
+.card-thumbnail-shell.has-loaded-thumbnail img.thumb {
+  opacity: 1;
 }
 
 .thumb-loading {
   position: absolute;
   inset: 0;
+  overflow: hidden;
+  background: linear-gradient(
+    90deg,
+    rgba(42, 42, 42, 0.9),
+    rgba(58, 58, 58, 0.85),
+    rgba(42, 42, 42, 0.9)
+  );
+  transition: opacity 180ms ease;
+}
+
+.card-thumbnail-shell.has-loaded-thumbnail .thumb-loading {
+  opacity: 0;
+}
+
+.thumb-loading::after {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.08),
+    transparent
+  );
+  content: "";
+  transform: translateX(-100%);
+  animation: thumb-shimmer 1.2s linear infinite;
 }
 
 .thumb-duration {
@@ -557,6 +590,10 @@ video {
   font-variation-settings: "wght" 560, "opsz" 100, "wdth" 120;
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
+}
+
+.card-thumbnail-shell:not(.has-loaded-thumbnail) .thumb-duration {
+  opacity: 0;
 }
 
 .thumb-fallback {
@@ -1196,6 +1233,12 @@ video {
 
   to {
     background-position: -100% 0;
+  }
+}
+
+@keyframes thumb-shimmer {
+  to {
+    transform: translateX(100%);
   }
 }
 

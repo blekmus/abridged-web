@@ -1,4 +1,3 @@
-import { useState } from "preact/hooks";
 import type { EpisodeCard } from "../../lib/types";
 import { formatDurationLabel } from "../entryUtils";
 
@@ -6,26 +5,32 @@ export function Thumbnail({
   episode,
   title,
   hideDuration = false,
-}: { episode: EpisodeCard; title: string; hideDuration?: boolean }) {
-  const [loadedImageUrl, setLoadedImageUrl] = useState<string | null>(null);
-  const imageLoaded =
-    Boolean(episode.thumbnailUrl) && loadedImageUrl === episode.thumbnailUrl;
+}: {
+  episode: EpisodeCard;
+  title: string;
+  hideDuration?: boolean;
+}) {
+  const markThumbnailLoaded = (image: HTMLImageElement) => {
+    image.parentElement?.classList.add("has-loaded-thumbnail");
+  };
 
   return (
     <>
       {episode.thumbnailUrl ? (
         <>
-          {!imageLoaded ? (
-            <div class="thumb-loading skeleton-block" aria-hidden="true" />
-          ) : null}
+          <div class="thumb-loading" aria-hidden="true" />
           <img
-            class={`thumb ${imageLoaded ? "is-loaded" : ""}`}
+            class="thumb"
             src={episode.thumbnailUrl}
-            alt={`${title} thumbnail`}
+            // alt={`${title} thumbnail`}
             loading="lazy"
             decoding="async"
-            onLoad={() => setLoadedImageUrl(episode.thumbnailUrl ?? null)}
-            onError={() => setLoadedImageUrl(episode.thumbnailUrl ?? null)}
+            onLoad={(event) => {
+              markThumbnailLoaded(event.currentTarget);
+            }}
+            onError={(event) => {
+              markThumbnailLoaded(event.currentTarget);
+            }}
           />
         </>
       ) : (

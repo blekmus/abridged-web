@@ -69,26 +69,47 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    let animationFrame = 0;
+    let saveTimeout = 0;
+    let lastSavedLeft = window.scrollX;
+    let lastSavedTop = window.scrollY;
 
-    const onScroll = () => {
-      if (animationFrame !== 0) {
+    const saveIfChanged = () => {
+      saveTimeout = 0;
+
+      if (window.scrollX === lastSavedLeft && window.scrollY === lastSavedTop) {
         return;
       }
 
-      animationFrame = window.requestAnimationFrame(() => {
-        animationFrame = 0;
-        saveCurrentScrollPosition();
-      });
+      lastSavedLeft = window.scrollX;
+      lastSavedTop = window.scrollY;
+      saveCurrentScrollPosition();
+    };
+
+    const onScroll = () => {
+      if (saveTimeout !== 0) {
+        return;
+      }
+
+      saveTimeout = window.setTimeout(saveIfChanged, 200);
+    };
+
+    const flushScrollPosition = () => {
+      if (saveTimeout !== 0) {
+        window.clearTimeout(saveTimeout);
+      }
+
+      saveIfChanged();
     };
 
     window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("pagehide", flushScrollPosition);
 
     return () => {
-      if (animationFrame !== 0) {
-        window.cancelAnimationFrame(animationFrame);
+      if (saveTimeout !== 0) {
+        window.clearTimeout(saveTimeout);
       }
       window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("pagehide", flushScrollPosition);
     };
   }, []);
 

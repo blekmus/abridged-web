@@ -1,8 +1,13 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { EntrySummary } from "../../lib/types";
+import { LOADING_CARD_KEYS } from "../constants";
 import { handleInternalLinkClick } from "../navigation";
 import { BrowseCard } from "./BrowseCard";
 import { SectionHeader } from "./SectionHeader";
+
+const DEFAULT_VISIBLE_COUNT = 8;
+const LIMITED_VISIBLE_COUNT = 4;
+const INFINITE_SCROLL_BATCH_SIZE = 24;
 
 export function BrowseSection({
   sectionId,
@@ -18,6 +23,7 @@ export function BrowseSection({
   showAllEntries = false,
   animateCards = true,
   hideSeriesDurations = false,
+  loading = false,
 }: {
   sectionId?: string;
   title: string;
@@ -32,9 +38,20 @@ export function BrowseSection({
   showAllEntries?: boolean;
   animateCards?: boolean;
   hideSeriesDurations?: boolean;
+  loading?: boolean;
 }) {
-  const initial = showAllEntries ? entries.length : limited ? 4 : 8;
-  const increment = limited ? 4 : 8;
+  const initial = showAllEntries
+    ? entries.length
+    : limited
+      ? LIMITED_VISIBLE_COUNT
+      : infiniteScroll
+        ? INFINITE_SCROLL_BATCH_SIZE
+        : DEFAULT_VISIBLE_COUNT;
+  const increment = limited
+    ? LIMITED_VISIBLE_COUNT
+    : infiniteScroll
+      ? INFINITE_SCROLL_BATCH_SIZE
+      : DEFAULT_VISIBLE_COUNT;
   const [visibleCount, setVisibleCount] = useState(initial);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const visibleEntries = entries.slice(0, visibleCount);
@@ -65,7 +82,7 @@ export function BrowseSection({
           return;
         }
 
-        setVisibleCount(entries.length);
+        setVisibleCount((count) => Math.min(count + increment, entries.length));
       },
       { rootMargin: "1200px 0px" },
     );
@@ -75,7 +92,7 @@ export function BrowseSection({
     return () => {
       observer.disconnect();
     };
-  }, [entries.length, infiniteScroll, visibleCount]);
+  }, [entries.length, increment, infiniteScroll, visibleCount]);
 
   return (
     <section id={sectionId} class="browse-section">
@@ -88,7 +105,20 @@ export function BrowseSection({
             compact={compactHeader}
           />
         ) : null}
-        {entries.length === 0 ? (
+        {loading ? (
+          <div class="card-grid">
+            {LOADING_CARD_KEYS.map((key) => (
+              <div key={key} class="browse-card skeleton-card">
+                <div class="card-thumbnail-shell skeleton-block" />
+                <div class="card-copy">
+                  <div class="skeleton-line short" />
+                  <div class="skeleton-line" />
+                  <div class="skeleton-line short" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : entries.length === 0 ? (
           <p class="empty-state">No items found in this section.</p>
         ) : (
           <>
@@ -99,7 +129,7 @@ export function BrowseSection({
                   entry={entry}
                   active={activeEntryId === entry.id}
                   animate={animateCards}
-                  animationDelay={index}
+                  animationDelay={index % increment}
                   hideDuration={hideSeriesDurations && entry.type === "series"}
                 />
               ))}

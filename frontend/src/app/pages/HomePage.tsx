@@ -3,7 +3,6 @@ import { useState } from "preact/hooks";
 import type { CatalogResponse } from "../../lib/types";
 import { BrowseSection } from "../components/BrowseSection";
 import { InlineError } from "../components/InlineError";
-import { LoadingGrid } from "../components/LoadingGrid";
 import { shuffledEntries } from "../entryUtils";
 import { optionalActiveEntryId } from "../propUtils";
 
@@ -64,50 +63,48 @@ export function HomePage({
       </section>
 
       {error ? <InlineError message={error} /> : null}
-      {loading ? <LoadingGrid /> : null}
-
-      {!loading && (
-        <>
-          <BrowseSection
-            title="Shows"
-            titleHref="/series"
-            titleClassName="accent-shows"
-            entries={randomizedHomeEntries.series}
-            {...optionalActiveEntryId(activeEntryId)}
-            limited
-            animateCards={!restoreFromHistory}
-            hideSeriesDurations
-          />
-          <BrowseSection
-            title="Shorts"
-            titleHref="/shorts"
-            titleClassName="accent-shorts"
-            entries={randomizedHomeEntries.shorts}
-            {...optionalActiveEntryId(activeEntryId)}
-            limited
-            animateCards={!restoreFromHistory}
-          />
-          <BrowseSection
-            title="One-Shots"
-            titleHref="/shots"
-            titleClassName="accent-one-shots"
-            entries={randomizedHomeEntries.shots}
-            {...optionalActiveEntryId(activeEntryId)}
-            limited
-            animateCards={!restoreFromHistory}
-          />
-          <BrowseSection
-            title="Songs"
-            titleHref="/songs"
-            titleClassName="accent-songs"
-            entries={randomizedHomeEntries.songs}
-            {...optionalActiveEntryId(activeEntryId)}
-            limited
-            animateCards={!restoreFromHistory}
-          />
-          <HomeQuestions />
-        </>
-      )}
+      <BrowseSection
+        title="Shows"
+        titleHref="/series"
+        titleClassName="accent-shows"
+        entries={randomizedHomeEntries.series}
+        {...optionalActiveEntryId(activeEntryId)}
+        limited
+        animateCards={!restoreFromHistory}
+        hideSeriesDurations
+        loading={loading}
+      />
+      <BrowseSection
+        title="Shorts"
+        titleHref="/shorts"
+        titleClassName="accent-shorts"
+        entries={randomizedHomeEntries.shorts}
+        {...optionalActiveEntryId(activeEntryId)}
+        limited
+        animateCards={!restoreFromHistory}
+        loading={loading}
+      />
+      <BrowseSection
+        title="One-Shots"
+        titleHref="/shots"
+        titleClassName="accent-one-shots"
+        entries={randomizedHomeEntries.shots}
+        {...optionalActiveEntryId(activeEntryId)}
+        limited
+        animateCards={!restoreFromHistory}
+        loading={loading}
+      />
+      <BrowseSection
+        title="Songs"
+        titleHref="/songs"
+        titleClassName="accent-songs"
+        entries={randomizedHomeEntries.songs}
+        {...optionalActiveEntryId(activeEntryId)}
+        limited
+        animateCards={!restoreFromHistory}
+        loading={loading}
+      />
+      <HomeQuestions />
     </>
   );
 }
