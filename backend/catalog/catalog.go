@@ -132,6 +132,8 @@ var (
 	seriesStemPattern = regexp.MustCompile(`^(Episode|OVA|Movie)\s+(\d+(?:\.\d+)?(?:~\d+(?:\.\d+)?)?)(?:\s*-\s*(.+))?$`)
 )
 
+var supportedVideoExtensions = []string{".mp4", ".webm"}
+
 func Load(root string) (*Library, error) {
 	absRoot, err := filepath.Abs(root)
 	if err != nil {
@@ -353,8 +355,15 @@ type episodeRecord struct {
 }
 
 func (l *Library) scanSingleRelease(entryPath, entryID string, entryType EntryType, title string) (episodeRecord, bool) {
-	videoPath := filepath.Join(entryPath, "1.mp4")
-	if _, err := os.Stat(videoPath); err != nil {
+	videoPath := ""
+	for _, ext := range supportedVideoExtensions {
+		candidate := filepath.Join(entryPath, "1"+ext)
+		if _, err := os.Stat(candidate); err == nil {
+			videoPath = candidate
+			break
+		}
+	}
+	if videoPath == "" {
 		return episodeRecord{}, false
 	}
 	metadata := l.readVideoMetadata(videoPath)
@@ -409,7 +418,7 @@ func (l *Library) scanSeries(entryPath, entryID string) ([]episodeRecord, error)
 
 	var episodes []episodeRecord
 	for _, item := range items {
-		if item.IsDir() || filepath.Ext(item.Name()) != ".mp4" {
+		if item.IsDir() || !isSupportedVideoFile(item.Name()) {
 			continue
 		}
 
@@ -455,6 +464,16 @@ func (l *Library) scanSeries(entryPath, entryID string) ([]episodeRecord, error)
 	}
 
 	return episodes, nil
+}
+
+func isSupportedVideoFile(name string) bool {
+	ext := strings.ToLower(filepath.Ext(name))
+	for _, supported := range supportedVideoExtensions {
+		if ext == supported {
+			return true
+		}
+	}
+	return false
 }
 
 func compareEpisodeRecords(a, b episodeRecord) bool {
@@ -621,7 +640,7 @@ func (c *videoMetadataCache) load() error {
 		return fmt.Errorf("metadata file %s is not a valid cache file", c.path)
 	}
 
-	c.items = payload.Items
+	c.items = normalizeVideoMetadataItems(payload.Items)
 	return nil
 }
 
@@ -631,20 +650,65 @@ func (c *videoMetadataCache) Read(videoPath string) videoMetadata {
 		return videoMetadata{}
 	}
 
-	key := c.key(videoPath)
-	if cached, ok := c.items[key]; ok && cached.matches(info) {
-		return cached.metadata()
+	for _, key := range c.keys(videoPath) {
+		if cached, ok := c.items[key]; ok && cached.matches(info) {
+			return cached.metadata()
+		}
 	}
 
 	return videoMetadata{}
 }
 
-func (c *videoMetadataCache) key(videoPath string) string {
-	relative, err := filepath.Rel(c.root, videoPath)
+func (c *videoMetadataCache) keys(videoPath string) []string {
+	keys := []string{metadataRelativeKey(c.root, videoPath), filepath.ToSlash(videoPath)}
+	seen := make(map[string]bool, len(keys))
+	unique := keys[:0]
+	for _, key := range keys {
+		key = normalizeMetadataKey(key)
+		if key == "" || seen[key] {
+			continue
+		}
+		seen[key] = true
+		unique = append(unique, key)
+	}
+	return unique
+}
+
+func metadataRelativeKey(root, videoPath string) string {
+	relative, err := filepath.Rel(root, videoPath)
 	if err != nil || relative == ".." || strings.HasPrefix(relative, ".."+string(filepath.Separator)) || filepath.IsAbs(relative) {
 		return filepath.ToSlash(videoPath)
 	}
 	return filepath.ToSlash(relative)
+}
+
+func normalizeVideoMetadataItems(items map[string]cachedVideoMetadata) map[string]cachedVideoMetadata {
+	normalized := make(map[string]cachedVideoMetadata, len(items))
+	for key, metadata := range items {
+		for _, normalizedKey := range metadataKeyAliases(key) {
+			if normalizedKey == "" {
+				continue
+			}
+			normalized[normalizedKey] = metadata
+		}
+	}
+	return normalized
+}
+
+func metadataKeyAliases(key string) []string {
+	normalized := normalizeMetadataKey(key)
+	aliases := []string{normalized}
+	for _, marker := range []string{"/Series/", "/Shorts/", "/Shots/", "/Songs/"} {
+		if index := strings.Index(normalized, marker); index >= 0 {
+			aliases = append(aliases, strings.TrimPrefix(normalized[index:], "/"))
+			break
+		}
+	}
+	return aliases
+}
+
+func normalizeMetadataKey(key string) string {
+	return strings.TrimLeft(filepath.ToSlash(strings.ReplaceAll(strings.TrimSpace(key), "\\", "/")), "/")
 }
 
 func (m cachedVideoMetadata) matches(info os.FileInfo) bool {
