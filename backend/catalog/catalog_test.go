@@ -132,6 +132,40 @@ func TestVideoMetadataCacheNormalizesWindowsKeys(t *testing.T) {
 	}
 }
 
+func TestVideoMetadataCacheAcceptsMatchingSizeWithChangedModTime(t *testing.T) {
+	root := t.TempDir()
+	videoPath := filepath.Join(root, "Series", "[Creator] Show", "Episode 2 - Changed Time.mp4")
+	if err := os.MkdirAll(filepath.Dir(videoPath), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(videoPath, []byte("video"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	info, err := os.Stat(videoPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	writeMetadataCacheFile(t, root, map[string]cachedVideoMetadata{
+		"Series/[Creator] Show/Episode 2 - Changed Time.mp4": {
+			Size:            info.Size(),
+			ModTimeUnixNano: info.ModTime().UnixNano() - 1,
+			Description:     "description survives copied mtimes",
+		},
+	})
+
+	cache, err := newVideoMetadataCache(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	metadata := cache.Read(videoPath)
+	if metadata.Description != "description survives copied mtimes" {
+		t.Fatalf("Description = %q, want description survives copied mtimes", metadata.Description)
+	}
+}
+
 func writeMetadataCacheFile(t *testing.T, root string, items map[string]cachedVideoMetadata) {
 	t.Helper()
 	if items == nil {

@@ -781,7 +781,7 @@ func normalizeMetadataKey(key string) string {
 }
 
 func (m cachedVideoMetadata) matches(info os.FileInfo) bool {
-	return m.Size == info.Size() && m.ModTimeUnixNano == info.ModTime().UnixNano()
+	return m.Size == info.Size()
 }
 
 func (m cachedVideoMetadata) metadata() videoMetadata {
