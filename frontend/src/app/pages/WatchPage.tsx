@@ -98,35 +98,45 @@ export function WatchPage({
                 ""
               )}
               <div class="watch-credit">
-                <p>
-                  <a
-                    href={browsePath}
-                    class={`watch-type-tag ${accentClassForEntryType(entry.type)}`}
-                    onClick={(event) => {
-                      handleInternalLinkClick(event, browsePath, {
-                        scrollToTop: true,
-                      });
-                    }}
-                  >
-                    {watchTypeLabel(entry)}
-                  </a>
+                <p class="watch-credit-row">
+                  <span class="watch-credit-label">Type</span>
+                  <span class="watch-credit-value">
+                    <a
+                      href={browsePath}
+                      class={`watch-type-tag ${accentClassForEntryType(entry.type)}`}
+                      onClick={(event) => {
+                        handleInternalLinkClick(event, browsePath, {
+                          scrollToTop: true,
+                        });
+                      }}
+                    >
+                      {watchTypeLabel(entry)}
+                    </a>
+                  </span>
                 </p>
-                <p>
-                  Produced by{" "}
-                  <a
-                    href={`/creator/${entry.creatorSlug}`}
-                    class="watch-credit-link"
-                    onClick={(event) => {
-                      handleInternalLinkClick(
-                        event,
-                        `/creator/${entry.creatorSlug}`,
-                      );
-                    }}
-                  >
-                    {entry.creator}
-                  </a>
+                <p class="watch-credit-row">
+                  <span class="watch-credit-label">Produced by</span>
+                  <span class="watch-credit-value">
+                    <a
+                      href={`/creator/${entry.creatorSlug}`}
+                      class="watch-credit-link"
+                      onClick={(event) => {
+                        handleInternalLinkClick(
+                          event,
+                          `/creator/${entry.creatorSlug}`,
+                        );
+                      }}
+                    >
+                      {entry.creator}
+                    </a>
+                  </span>
                 </p>
-                {episodeDate ? <p>Uploaded on {episodeDate}</p> : null}
+                {episodeDate ? (
+                  <p class="watch-credit-row">
+                    <span class="watch-credit-label">Uploaded on</span>
+                    <span class="watch-credit-value">{episodeDate}</span>
+                  </p>
+                ) : null}
               </div>
             </div>
 
