@@ -13,12 +13,13 @@ import {
   parseRoute,
   saveCurrentScrollPosition,
 } from "../lib/router";
-import type { CatalogResponse, EntryType } from "../lib/types";
+import type { CatalogResponse } from "../lib/types";
 import { SiteFooter } from "./components/SiteFooter";
 import { SiteHeader } from "./components/SiteHeader";
-import { EMPTY_CATALOG } from "./constants";
+import { EMPTY_CATALOG, TYPE_META } from "./constants";
 import { entriesForType } from "./entryUtils";
 import { scrollPageToHash, scrollPageToPosition } from "./navigation";
+import { setPageTitle } from "./pageTitle";
 import { BrowsePage } from "./pages/BrowsePage";
 import { CreatorPage } from "./pages/CreatorPage";
 import { HomePage } from "./pages/HomePage";
@@ -26,6 +27,7 @@ import { NotFoundPage } from "./pages/NotFoundPage";
 import { WatchPage } from "./pages/WatchPage";
 import { optionalActiveEntryId } from "./propUtils";
 import type { AsyncState } from "./types";
+import { findEntryForWatchPath } from "./watchPaths";
 
 type NavigationKind = "initial" | "push" | "pop";
 
@@ -139,14 +141,18 @@ export function App() {
   const pathname = navigationState.pathname;
   const route = useMemo(() => parseRoute(pathname), [pathname]);
   const catalog = catalogState.data ?? EMPTY_CATALOG;
-  const activeWatchEntryId = route.name === "watch" ? route.entryId : undefined;
-  const activeWatchEntryType = activeWatchEntryId
-    ? entryTypeForId(catalog, activeWatchEntryId)
-    : undefined;
+  const sluggedWatchEntry =
+    route.name === "watch-path"
+      ? findEntryForWatchPath(catalog, route.creatorSlug, route.entrySlug)
+      : undefined;
+  const missingWatchEntry =
+    route.name === "watch-path" && !catalogState.loading && !sluggedWatchEntry;
+  const activeWatchEntryId = sluggedWatchEntry?.id;
   const isHistoryNavigation = navigationState.kind === "pop";
 
   useRestoreScrollOnHistoryNavigation(navigationState);
   useScrollToHashTarget(navigationState, catalogState.loading);
+  useRoutePageTitle(route, missingWatchEntry);
 
   return (
     <div class="page-shell">
@@ -180,38 +186,22 @@ export function App() {
             {...optionalActiveEntryId(activeWatchEntryId)}
           />
         )}
-        {route.name === "watch" && (
-          <WatchPage
-            entryId={route.entryId}
-            entryTypeHint={activeWatchEntryType}
-            restoreFromHistory={isHistoryNavigation}
-            {...optionalEpisodeId(route.episodeId)}
-          />
-        )}
+        {route.name === "watch-path" &&
+          (sluggedWatchEntry || catalogState.loading ? (
+            <WatchPage
+              entryId={sluggedWatchEntry?.id}
+              entryTypeHint={sluggedWatchEntry?.type}
+              restoreFromHistory={isHistoryNavigation}
+              {...optionalEpisodeSlug(route.episodeSlug)}
+            />
+          ) : (
+            <NotFoundPage />
+          ))}
         {route.name === "not-found" && <NotFoundPage />}
       </main>
       <SiteFooter />
     </div>
   );
-}
-
-function entryTypeForId(
-  catalog: CatalogResponse,
-  entryId: string,
-): EntryType | undefined {
-  for (const entry of [
-    ...catalog.series,
-    ...catalog.shorts,
-    ...catalog.shots,
-    ...catalog.songs,
-    ...catalog.songAmvs,
-  ]) {
-    if (entry.id === entryId) {
-      return entry.type;
-    }
-  }
-
-  return undefined;
 }
 
 function useScrollToHashTarget(
@@ -225,6 +215,35 @@ function useScrollToHashTarget(
 
     scrollPageToHash(window.location.hash);
   }, [navigationState, loading]);
+}
+
+function useRoutePageTitle(
+  route: ReturnType<typeof parseRoute>,
+  missingWatchEntry: boolean,
+): void {
+  useEffect(() => {
+    if (missingWatchEntry) {
+      setPageTitle("Not Found");
+      return;
+    }
+
+    switch (route.name) {
+      case "home":
+        setPageTitle();
+        return;
+      case "browse":
+        setPageTitle(TYPE_META[route.entryType].title);
+        return;
+      case "creator":
+        setPageTitle(route.slug.replace(/-/g, " "));
+        return;
+      case "watch-path":
+        return;
+      case "not-found":
+        setPageTitle("Not Found");
+        return;
+    }
+  }, [route, missingWatchEntry]);
 }
 
 function useRestoreScrollOnHistoryNavigation(
@@ -282,8 +301,8 @@ function useRestoreScrollOnHistoryNavigation(
   }, [navigationState]);
 }
 
-function optionalEpisodeId(episodeId: string | undefined): {
-  episodeId?: string;
+function optionalEpisodeSlug(episodeSlug: string | undefined): {
+  episodeSlug?: string;
 } {
-  return episodeId ? { episodeId } : {};
+  return episodeSlug ? { episodeSlug } : {};
 }

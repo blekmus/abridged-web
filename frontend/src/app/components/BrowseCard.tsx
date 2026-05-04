@@ -1,6 +1,7 @@
 import type { Entry, EntrySummary, EpisodeCard } from "../../lib/types";
 import { findPosterEpisode } from "../entryUtils";
 import { handleInternalLinkClick } from "../navigation";
+import { entryWatchPath } from "../watchPaths";
 import { Thumbnail } from "./Thumbnail";
 
 type BrowseCardEntry = EntrySummary | Entry;
@@ -19,6 +20,8 @@ export function BrowseCard({
   hideDuration?: boolean;
 }) {
   const poster = posterForEntry(entry);
+  const watchPath = entryWatchPath(entry);
+  const creatorPath = `/${entry.creatorSlug}`;
 
   return (
     <article
@@ -26,10 +29,10 @@ export function BrowseCard({
       style={animate ? { animationDelay: `${animationDelay * 60}ms` } : {}}
     >
       <a
-        href={`/watch/${entry.id}`}
+        href={watchPath}
         class="card-thumbnail-shell"
         onClick={(event) => {
-          handleInternalLinkClick(event, `/watch/${entry.id}`, {
+          handleInternalLinkClick(event, watchPath, {
             scrollToTop: true,
           });
         }}
@@ -42,19 +45,19 @@ export function BrowseCard({
       </a>
       <div class="card-copy">
         <a
-          href={`/creator/${entry.creatorSlug}`}
+          href={creatorPath}
           class="card-meta"
           onClick={(event) => {
-            handleInternalLinkClick(event, `/creator/${entry.creatorSlug}`);
+            handleInternalLinkClick(event, creatorPath);
           }}
         >
           [{entry.creator}]
         </a>
         <a
-          href={`/watch/${entry.id}`}
+          href={watchPath}
           class="card-title-link"
           onClick={(event) => {
-            handleInternalLinkClick(event, `/watch/${entry.id}`, {
+            handleInternalLinkClick(event, watchPath, {
               scrollToTop: true,
             });
           }}

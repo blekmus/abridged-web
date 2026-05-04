@@ -7,6 +7,7 @@ import { InlineError } from "../components/InlineError";
 import { LoadingGrid } from "../components/LoadingGrid";
 import { CREATOR_SECTIONS } from "../constants";
 import { groupEntriesByType } from "../entryUtils";
+import { setPageTitle } from "../pageTitle";
 import { optionalActiveEntryId } from "../propUtils";
 import type { AsyncState } from "../types";
 
@@ -47,6 +48,10 @@ export function CreatorPage({
   const entries = state.data ?? [];
   const title = entries[0]?.creator ?? slug.replace(/-/g, " ");
   const groupedEntries = groupEntriesByType(entries);
+
+  useEffect(() => {
+    setPageTitle(title);
+  }, [title]);
 
   return (
     <section class="browse-page">

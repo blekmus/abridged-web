@@ -6,7 +6,12 @@ export type Route =
   | { name: "home" }
   | { name: "browse"; entryType: EntryType }
   | { name: "creator"; slug: string }
-  | { name: "watch"; entryId: string; episodeId?: string }
+  | {
+      name: "watch-path";
+      creatorSlug: string;
+      entrySlug: string;
+      episodeSlug?: string;
+    }
   | { name: "not-found"; path: string };
 
 export type ScrollPosition = {
@@ -72,28 +77,43 @@ export function parseRoute(pathname: string): Route {
   }
 
   if (parts.length === 1) {
-    if (parts[0] === "series") {
+    const [slug] = parts;
+
+    if (slug === "series") {
       return { name: "browse", entryType: "series" };
     }
-    if (parts[0] === "shorts") {
+    if (slug === "shorts") {
       return { name: "browse", entryType: "short" };
     }
-    if (parts[0] === "shots") {
+    if (slug === "shots") {
       return { name: "browse", entryType: "shot" };
     }
-    if (parts[0] === "songs") {
+    if (slug === "songs") {
       return { name: "browse", entryType: "song" };
+    }
+
+    if (slug) {
+      return { name: "creator", slug };
     }
   }
 
-  if (parts[0] === "creator" && parts[1]) {
-    return { name: "creator", slug: parts[1] };
+  const [creatorSlug, entrySlug, episodeSlug] = parts;
+
+  if (parts.length === 2 && creatorSlug && entrySlug) {
+    return {
+      name: "watch-path",
+      creatorSlug,
+      entrySlug,
+    };
   }
 
-  if (parts[0] === "watch" && parts[1]) {
-    return parts[2]
-      ? { name: "watch", entryId: parts[1], episodeId: parts[2] }
-      : { name: "watch", entryId: parts[1] };
+  if (parts.length === 3 && creatorSlug && entrySlug && episodeSlug) {
+    return {
+      name: "watch-path",
+      creatorSlug,
+      entrySlug,
+      episodeSlug,
+    };
   }
 
   return { name: "not-found", path: pathname };

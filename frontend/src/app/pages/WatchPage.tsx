@@ -12,7 +12,9 @@ import {
   watchTypeLabel,
 } from "../entryUtils";
 import { handleInternalLinkClick } from "../navigation";
+import { setPageTitle } from "../pageTitle";
 import type { AsyncState } from "../types";
+import { episodeWatchPath } from "../watchPaths";
 
 const PLAYER_VOLUME_STORAGE_KEY = "abridged-player-volume";
 const PLAYER_MUTED_STORAGE_KEY = "abridged-player-muted";
@@ -20,12 +22,12 @@ const syncedPlayers = new WeakSet<HTMLVideoElement>();
 
 export function WatchPage({
   entryId,
-  episodeId,
+  episodeSlug,
   entryTypeHint,
   restoreFromHistory,
 }: {
-  entryId: string;
-  episodeId?: string;
+  entryId: string | undefined;
+  episodeSlug?: string;
   entryTypeHint: EntryType | undefined;
   restoreFromHistory: boolean;
 }) {
@@ -36,6 +38,11 @@ export function WatchPage({
   });
 
   useEffect(() => {
+    if (!entryId) {
+      setState({ data: null, loading: true, error: null });
+      return;
+    }
+
     let active = true;
     setState({ data: null, loading: true, error: null });
     api
@@ -54,6 +61,19 @@ export function WatchPage({
     };
   }, [entryId]);
 
+  useEffect(() => {
+    if (!state.data) {
+      return;
+    }
+
+    const entry = state.data;
+    const episode = chooseEpisode(entry, episodeSlug);
+    const episodeTitle = episode.displayTitle || episode.videoTitle;
+    setPageTitle(
+      episodeSlug ? `${entry.entryTitle} - ${episodeTitle}` : entry.entryTitle,
+    );
+  }, [state.data, episodeSlug]);
+
   if (state.loading) {
     return <WatchPageSkeleton entryType={entryTypeHint} />;
   }
@@ -63,7 +83,8 @@ export function WatchPage({
   }
 
   const entry = state.data;
-  const episode = chooseEpisode(entry, episodeId);
+  const episode = chooseEpisode(entry, episodeSlug);
+  const episodeTitle = episode.displayTitle || episode.videoTitle;
   const description = episode.description || entry.description;
   const episodeDate = formatEpisodeDate(episode.date);
   const browsePath =
@@ -91,9 +112,7 @@ export function WatchPage({
           <div class="watch-main">
             <div class="metadata-block">
               {entry.type === "series" ? (
-                <p class="video-title">
-                  {episode.displayTitle || episode.videoTitle}
-                </p>
+                <p class="video-title">{episodeTitle}</p>
               ) : (
                 ""
               )}
@@ -118,13 +137,10 @@ export function WatchPage({
                   <span class="watch-credit-label">Produced by</span>
                   <span class="watch-credit-value">
                     <a
-                      href={`/creator/${entry.creatorSlug}`}
+                      href={`/${entry.creatorSlug}`}
                       class="watch-credit-link"
                       onClick={(event) => {
-                        handleInternalLinkClick(
-                          event,
-                          `/creator/${entry.creatorSlug}`,
-                        );
+                        handleInternalLinkClick(event, `/${entry.creatorSlug}`);
                       }}
                     >
                       {entry.creator}
@@ -150,48 +166,48 @@ export function WatchPage({
                   <span>Episodes</span>
                 </h2>
                 <div class="watch-metadata-grid card-grid">
-                  {entry.episodes.map((item) => (
-                    <article
-                      key={item.id}
-                      class={`browse-card watch-episode-card ${item.id === episode.id ? "is-active" : ""} ${restoreFromHistory ? "skip-enter-animation" : ""}`}
-                    >
-                      <a
-                        href={`/watch/${entry.id}/${item.id}`}
-                        class="card-thumbnail-shell"
-                        onClick={(event) => {
-                          handleInternalLinkClick(
-                            event,
-                            `/watch/${entry.id}/${item.id}`,
-                            { scrollToTop: true },
-                          );
-                        }}
+                  {entry.episodes.map((item) => {
+                    const itemWatchPath = episodeWatchPath(entry, item);
+
+                    return (
+                      <article
+                        key={item.id}
+                        class={`browse-card watch-episode-card ${item.id === episode.id ? "is-active" : ""} ${restoreFromHistory ? "skip-enter-animation" : ""}`}
                       >
-                        <Thumbnail episode={item} title={entry.entryTitle} />
-                      </a>
-                      <div class="card-copy">
                         <a
-                          href={`/watch/${entry.id}/${item.id}`}
-                          class="card-title-link"
+                          href={itemWatchPath}
+                          class="card-thumbnail-shell"
                           onClick={(event) => {
-                            handleInternalLinkClick(
-                              event,
-                              `/watch/${entry.id}/${item.id}`,
-                              { scrollToTop: true },
-                            );
+                            handleInternalLinkClick(event, itemWatchPath, {
+                              scrollToTop: true,
+                            });
                           }}
                         >
-                          <h3 class="card-title">
-                            {item.displayTitle || item.videoTitle}
-                          </h3>
-                          {item.date ? (
-                            <p class="card-submeta">
-                              {formatEpisodeDate(item.date)}
-                            </p>
-                          ) : null}
+                          <Thumbnail episode={item} title={entry.entryTitle} />
                         </a>
-                      </div>
-                    </article>
-                  ))}
+                        <div class="card-copy">
+                          <a
+                            href={itemWatchPath}
+                            class="card-title-link"
+                            onClick={(event) => {
+                              handleInternalLinkClick(event, itemWatchPath, {
+                                scrollToTop: true,
+                              });
+                            }}
+                          >
+                            <h3 class="card-title">
+                              {item.displayTitle || item.videoTitle}
+                            </h3>
+                            {item.date ? (
+                              <p class="card-submeta">
+                                {formatEpisodeDate(item.date)}
+                              </p>
+                            ) : null}
+                          </a>
+                        </div>
+                      </article>
+                    );
+                  })}
                 </div>
               </section>
             ) : null}

@@ -5,6 +5,7 @@ import type {
   EntryType,
   Episode,
 } from "../lib/types";
+import { episodeSlug } from "./watchPaths";
 
 export function entriesForType(
   catalog: CatalogResponse,
@@ -132,9 +133,14 @@ export function formatDurationLabel(durationSeconds: number): string {
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
 
-export function chooseEpisode(entry: Entry, episodeId?: string): Episode {
-  if (episodeId) {
-    const matched = entry.episodes.find((episode) => episode.id === episodeId);
+export function chooseEpisode(
+  entry: Entry,
+  requestedEpisodeSlug?: string,
+): Episode {
+  if (requestedEpisodeSlug) {
+    const matched = entry.episodes.find(
+      (episode) => episodeSlug(episode) === requestedEpisodeSlug,
+    );
     if (matched) {
       return matched;
     }
