@@ -15,16 +15,16 @@
   position: relative;
   pointer-events: auto;
   cursor: pointer;
-  transition: box-shadow 280ms cubic-bezier(0.22, 0.61, 0.36, 1), border-color
-    280ms cubic-bezier(0.22, 0.61, 0.36, 1), background-color 280ms ease,
-    opacity 400ms cubic-bezier(0.42, 0, 0.58, 1);
+  transition: box-shadow 420ms cubic-bezier(0.22, 0.61, 0.36, 1), border-color
+    420ms cubic-bezier(0.22, 0.61, 0.36, 1), background-color 420ms ease,
+    opacity 180ms cubic-bezier(0.42, 0, 0.58, 1);
 }
 
 .search-entry-surprise
   .search-entry-template
   :is(.search-thumbnail, .search-type) {
-  transition: box-shadow 280ms cubic-bezier(0.22, 0.61, 0.36, 1), border-color
-    280ms cubic-bezier(0.22, 0.61, 0.36, 1), background-color 280ms ease;
+  transition: box-shadow 420ms cubic-bezier(0.22, 0.61, 0.36, 1), border-color
+    420ms cubic-bezier(0.22, 0.61, 0.36, 1), background-color 420ms ease;
 }
 
 .search-entry-surprise:is([data-stage="flattening"], .is-rendered)
@@ -78,7 +78,7 @@
   display: block;
   pointer-events: none;
   opacity: 0;
-  transition: opacity 400ms cubic-bezier(0.42, 0, 0.58, 1);
+  transition: opacity 180ms cubic-bezier(0.42, 0, 0.58, 1);
 }
 
 .search-entry-surprise.is-rendered .surprise-scene {
@@ -117,6 +117,7 @@
 
 .surprise-label .search-thumbnail {
   --accent: var(--accent-shows);
+  border-color: transparent;
   background: rgb(16 16 16 / 25%);
   color: #79746d;
 }

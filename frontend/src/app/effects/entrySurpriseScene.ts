@@ -108,8 +108,8 @@ export function createEntrySurprise(options: Options) {
   host.append(cssRenderer.domElement);
 
   const scene = new THREE.Scene();
-  // A real dark transmission background prevents transparent pixels from refracting white.
-  scene.background = new THREE.Color(0x101010);
+  // Keep the padded canvas transparent so the tether remains visible behind it.
+  // The renderer still clears to dark RGB for the glass transmission pass.
   const distance = 900;
   const camera = new THREE.PerspectiveCamera(
     (2 * Math.atan(canvasHeight / (2 * distance)) * 180) / Math.PI,
@@ -127,14 +127,14 @@ export function createEntrySurprise(options: Options) {
   }
   scene.environment = sharedEnvironment.texture;
   scene.environmentRotation.set(0.6, 0.8, 0.2);
-  scene.add(new THREE.AmbientLight(0xdce9ff, 0.8));
-  const key = new THREE.DirectionalLight(0xfff4e1, 3.5);
+  scene.add(new THREE.AmbientLight(0xffffff, 0.2));
+  const key = new THREE.DirectionalLight(0xffffff, 0.9);
   key.position.set(-width * 0.4, 160, 280);
   scene.add(key);
-  const rim = new THREE.PointLight(0x6adfff, 24000, 1000, 2);
+  const rim = new THREE.PointLight(0xffffff, 10000, 1000, 2);
   rim.position.set(width * 0.48, -60, 100);
   scene.add(rim);
-  const warm = new THREE.PointLight(0xffd69a, 18000, 1000, 2);
+  const warm = new THREE.PointLight(0xffffff, 6000, 1000, 2);
   warm.position.set(-width * 0.4, 90, 150);
   scene.add(warm);
 
@@ -179,10 +179,12 @@ export function createEntrySurprise(options: Options) {
     clearcoatRoughness: 0.12,
     transmission: 0,
     thickness: 10,
+    attenuationColor: 0x303030,
+    attenuationDistance: 18,
     ior: 1.46,
     iridescence: 0,
     iridescenceIOR: 1.35,
-    dispersion: 0.18,
+    dispersion: 0,
     envMapIntensity: 0.65,
   });
   const lowerRimSoftness = softenLowerRim(bodyMaterial, height);
@@ -204,7 +206,7 @@ export function createEntrySurprise(options: Options) {
   const travelScale = 0.55;
   const returnFraction = 0.5;
   const restingHeight = 15 * travelScale * (1 - returnFraction);
-  const glass = new THREE.Color(0xaebfc8);
+  const glass = new THREE.Color(0x252525);
   let frame = 0;
   let disposed = false;
   let released = false;
@@ -235,14 +237,14 @@ export function createEntrySurprise(options: Options) {
     const dt = Math.min((now - previous) / 1000, 0.05);
     previous = now;
     elapsed += dt;
-    const lift = smooth(0.06, 0.34, elapsed);
-    const strain = smooth(0.34, 0.6, elapsed);
-    const release = smooth(0.6, 0.83, elapsed);
-    const glassOptics = smooth(0.6, 0.82, elapsed);
-    const reveal = smooth(0.82, 1.24, elapsed);
+    const lift = smooth(0, 0.2, elapsed);
+    const strain = smooth(0.2, 0.35, elapsed);
+    const release = smooth(0.35, 0.58, elapsed);
+    const glassOptics = smooth(0.35, 0.57, elapsed);
+    const reveal = smooth(0.57, 0.99, elapsed);
     const softHighlight =
-      smooth(0.82, 1.03, elapsed) * (1 - smooth(1.03, 1.6, elapsed));
-    const springTime = Math.max(0, elapsed - 0.6);
+      smooth(0.57, 0.78, elapsed) * (1 - smooth(0.78, 1.35, elapsed));
+    const springTime = Math.max(0, elapsed - 0.35);
     const spring =
       1 - Math.exp(-springTime * 4.8) * Math.cos(springTime * 12.5);
     const returnToRest = smooth(0.24, 0.68, springTime);
@@ -251,16 +253,21 @@ export function createEntrySurprise(options: Options) {
       baseZ + (lift * 8 + strain * 13 + spring * 34) * travelScale;
     // Return halfway from the old floating height, preserving the spring's settling motion.
     group.position.y =
-      elapsed >= 2.4
+      elapsed >= 2.15
         ? restingHeight
         : (lift * 2 +
             strain * 2 +
             spring * 11 -
             returnToRest * 15 * returnFraction) *
           travelScale;
+    group.position.y -= 2 * (1 - lift);
     group.position.x = tremor * 0.35;
-    group.scale.set(1 - release * 0.025, 1 + release * 0.04, 1);
-    const hoverEnabled = elapsed >= 0.6;
+    group.scale.set(
+      (1 - release * 0.025) * ((width - 3) / width),
+      (1 + release * 0.04) * ((height - 3) / height),
+      1,
+    );
+    const hoverEnabled = elapsed >= 0.35;
     currentTiltX = THREE.MathUtils.damp(
       currentTiltX,
       hoverEnabled ? tiltX : 0,
@@ -283,25 +290,26 @@ export function createEntrySurprise(options: Options) {
     group.rotation.z =
       Math.sin(springTime * 10) * Math.exp(-springTime * 3.5) * release * 0.012;
     bodyMaterial.color.copy(metal).lerp(glass, reveal);
-    // Establish transparency before brightening the tint, avoiding an opaque white flash.
+    // Reveal charcoal glass without a pale tint or broad white room reflections.
     bodyMaterial.metalness = THREE.MathUtils.lerp(0.82, 0, glassOptics);
-    bodyMaterial.roughness = THREE.MathUtils.lerp(0.7, 0.075, reveal);
+    bodyMaterial.roughness = THREE.MathUtils.lerp(0.7, 0.12, reveal);
     lowerRimSoftness.value = reveal;
-    bodyMaterial.transmission = glassOptics * 0.98;
-    bodyMaterial.clearcoat = THREE.MathUtils.lerp(0.3, 1, reveal);
-    bodyMaterial.iridescence = glassOptics * 0.18;
-    bodyMaterial.envMapIntensity = 0.65 + softHighlight * 0.04;
+    bodyMaterial.transmission = glassOptics * 0.8;
+    bodyMaterial.clearcoat = THREE.MathUtils.lerp(0.3, 0.45, reveal);
+    bodyMaterial.iridescence = 0;
+    bodyMaterial.envMapIntensity =
+      THREE.MathUtils.lerp(0.65, 0.12, reveal) + softHighlight * 0.01;
     // A steady, diffuse shadow: only its initial fade follows the lift, never the spring.
     const shadowVisibility = shadowMaterial.uniforms.uVisibility;
-    if (shadowVisibility) shadowVisibility.value = smooth(0.08, 0.6, elapsed);
-    if (elapsed < 0.34) stage("lifting");
-    else if (elapsed < 0.6) stage("straining");
+    if (shadowVisibility) shadowVisibility.value = smooth(0.03, 0.35, elapsed);
+    if (elapsed < 0.2) stage("lifting");
+    else if (elapsed < 0.35) stage("straining");
     else if (!released) {
       released = true;
       stage("released");
       options.onRelease();
     }
-    if (elapsed > 2.4 && !settled) {
+    if (elapsed > 2.15 && !settled) {
       settled = true;
       stage("settled");
     }
@@ -368,8 +376,8 @@ export function createEntrySurprise(options: Options) {
     },
     async warmup() {
       // KHR_parallel_shader_compile lets supported drivers prepare without blocking input.
-      bodyMaterial.transmission = 0.98;
-      bodyMaterial.iridescence = 0.18;
+      bodyMaterial.transmission = 0.8;
+      bodyMaterial.iridescence = 0;
       await renderer.compileAsync(scene, camera);
       render();
       bodyMaterial.transmission = 0;

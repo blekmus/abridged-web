@@ -92,7 +92,7 @@ export function SearchEntrySurprise({
         // Blend into 3D before flattening ends, so the two surfaces never pause apart.
         source.getBoundingClientRect();
         const transitions = source.getAnimations({ subtree: true });
-        handoffTimer = window.setTimeout(resolve, 160);
+        handoffTimer = window.setTimeout(resolve, 190);
         void Promise.all(
           transitions.map((transition) => transition.finished.catch(() => {})),
         ).then(() => {

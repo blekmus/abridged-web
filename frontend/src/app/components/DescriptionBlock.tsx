@@ -48,10 +48,7 @@ export function DescriptionBlock({ text }: { text: string }) {
   }, []);
 
   return (
-    <section class="description-section">
-      <h2 class="watch-section-title">
-        <span>Description</span>
-      </h2>
+    <section class="description-section" aria-label="Description">
       <div class="description-block">
         <div
           class={`description-copy ${isCollapsed ? "collapsed" : "expanded"}`}

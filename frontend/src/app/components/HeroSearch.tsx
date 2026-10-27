@@ -16,7 +16,7 @@ import {
   searchQueryTerms,
 } from "../search";
 import { entryWatchPath } from "../watchPaths";
-import { SearchEntrySurprise } from "./SearchEntrySurprise";
+import { SearchWelcome } from "./SearchWelcome";
 
 export function HeroSearch({
   catalog,
@@ -27,7 +27,8 @@ export function HeroSearch({
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [panelHeight, setPanelHeight] = useState(0);
   const [results, setResults] = useState<EntrySummary[]>([]);
-  const [resultsLoading, setResultsLoading] = useState(false);
+  const [requestLoading, setResultsLoading] = useState(false);
+  const [completedQuery, setCompletedQuery] = useState("");
   const [surprisePunchline, setSurprisePunchline] = useState(false);
   const [shortcutModifier, setShortcutModifier] = useState("Ctrl");
   const rootRef = useRef<HTMLDivElement>(null);
@@ -36,10 +37,14 @@ export function HeroSearch({
   const listRef = useRef<HTMLDivElement>(null);
   const terms = useMemo(() => searchQueryTerms(query), [query]);
   const hasQuery = terms.length > 0;
+  const resultsLoading =
+    hasQuery && (requestLoading || completedQuery !== query);
   const showResults = expanded && terms.length > 0;
 
   useEffect(() => {
-    if (!expanded || hasQuery) setSurprisePunchline(false);
+    if (!expanded || hasQuery) {
+      setSurprisePunchline(false);
+    }
   }, [expanded, hasQuery]);
 
   useEffect(() => {
@@ -64,7 +69,10 @@ export function HeroSearch({
           setResults([]);
         })
         .finally(() => {
-          if (!controller.signal.aborted) setResultsLoading(false);
+          if (!controller.signal.aborted) {
+            setCompletedQuery(query);
+            setResultsLoading(false);
+          }
         });
     }, 300);
 
@@ -87,7 +95,7 @@ export function HeroSearch({
   const clearSearch = () => {
     setQuery("");
     setSelectedIndex(0);
-    focusSearch();
+    if (expanded) inputRef.current?.focus({ preventScroll: true });
   };
   const selectRelative = (direction: number) => {
     setExpanded(true);
@@ -346,7 +354,7 @@ export function HeroSearch({
         ))}
       </nav>
 
-      {expanded ? (
+      {expanded && panelHeight > 0 ? (
         <div
           class="search-panel"
           style={{ height: `${panelHeight}px` }}
@@ -477,7 +485,7 @@ export function HeroSearch({
                     class="search-status-label search-status-punchline"
                     aria-hidden={!surprisePunchline}
                   >
-                    Woah! Absolutely nothing happened!!
+                    Woah! Absolutely nothing happened. Congratulations!!
                   </span>
                 </span>
               )}
@@ -523,26 +531,6 @@ export function HeroSearch({
           </div>
         </div>
       ) : null}
-    </div>
-  );
-}
-
-function SearchWelcome({
-  onBegin,
-  onCheerStart,
-}: {
-  onBegin: () => void;
-  onCheerStart: () => void;
-}) {
-  return (
-    <div class="search-welcome">
-      <div class="search-welcome-copy">
-        <h2>Welcome to the catalogue.</h2>
-        <p id="search-welcome-hint">
-          Type a title, creator, or format to start searching.
-        </p>
-      </div>
-      <SearchEntrySurprise onBegin={onBegin} onCheerStart={onCheerStart} />
     </div>
   );
 }

@@ -45,7 +45,7 @@ export function HomePage({
           </div>
           <p class="hero-copy">
             A collection of abridged anime,{" "}
-            <i>including the ones the companies tried to erase.</i>
+            <i>including the ones the platforms tried to erase.</i>
           </p>
           <HeroSearch catalog={catalog} loading={loading} />
         </div>

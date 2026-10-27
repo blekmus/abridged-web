@@ -1,0 +1,27 @@
+/* Two quiet edges suggest that a show holds more than one video. */
+.browse-card.is-collection {
+  position: relative;
+}
+
+.browse-card.is-collection::before,
+.browse-card.is-collection::after {
+  position: absolute;
+  height: 16px;
+  border: 1px solid rgb(255 255 255 / 10%);
+  background: var(--color-surface);
+  content: "";
+  pointer-events: none;
+}
+
+.browse-card.is-collection::before {
+  inset: -8px 8px auto;
+  border-color: rgb(255 255 255 / 6%);
+}
+
+.browse-card.is-collection::after {
+  inset: -4px 4px auto;
+}
+
+.browse-card.is-collection > .card-thumbnail-shell {
+  z-index: 1;
+}

@@ -3,6 +3,7 @@ import { findPosterEpisode } from "../entryUtils";
 import { handleInternalLinkClick } from "../navigation";
 import { entryWatchPath } from "../watchPaths";
 import { Thumbnail } from "./Thumbnail";
+import "../../styles/browse-collections.css";
 
 type BrowseCardEntry = EntrySummary | Entry;
 
@@ -25,7 +26,7 @@ export function BrowseCard({
 
   return (
     <article
-      class={`browse-card ${active ? "is-active" : ""} ${animate ? "" : "skip-enter-animation"}`}
+      class={`browse-card ${entry.type === "series" ? "is-collection" : ""} ${active ? "is-active" : ""} ${animate ? "" : "skip-enter-animation"}`}
       style={animate ? { animationDelay: `${animationDelay * 60}ms` } : {}}
     >
       <a
