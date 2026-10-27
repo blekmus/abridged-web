@@ -1,10 +1,12 @@
 // import type { ComponentChildren } from "preact";
 // import { useState } from "preact/hooks";
+import { useEffect } from "preact/hooks";
 import type { CatalogResponse } from "../../lib/types";
 import { BrowseSection } from "../components/BrowseSection";
+import { HeroSearch } from "../components/HeroSearch";
 import { InlineError } from "../components/InlineError";
+import { scheduleEntrySurprisePreparation } from "../effects/entrySurprisePreparation";
 import { shuffledEntries } from "../entryUtils";
-import { handleInternalLinkClick } from "../navigation";
 import { optionalActiveEntryId } from "../propUtils";
 
 type RandomizedHomeEntries = CatalogResponse;
@@ -26,32 +28,8 @@ export function HomePage({
   restoreFromHistory: boolean;
   activeEntryId?: string;
 }) {
-  const heroCategories = [
-    {
-      label: "Shows",
-      href: "/series",
-      accentClass: "accent-shows",
-      count: catalog.series.length,
-    },
-    {
-      label: "Shorts",
-      href: "/shorts",
-      accentClass: "accent-shorts",
-      count: catalog.shorts.length,
-    },
-    {
-      label: "One-shots",
-      href: "/shots",
-      accentClass: "accent-one-shots",
-      count: catalog.shots.length,
-    },
-    {
-      label: "Songs",
-      href: "/songs",
-      accentClass: "accent-songs",
-      count: catalog.songs.length + catalog.songAmvs.length,
-    },
-  ];
+  useEffect(() => scheduleEntrySurprisePreparation(), []);
+
   const randomizedHomeEntries = getRandomizedHomeEntries(catalog);
 
   return (
@@ -69,26 +47,7 @@ export function HomePage({
             A collection of abridged anime,{" "}
             <i>including the ones the companies tried to erase.</i>
           </p>
-          <nav class="hero-nav" aria-label="Browse the catalogue by format">
-            {heroCategories.map(({ label, href, accentClass, count }) => (
-              <a
-                class={`hero-category ${accentClass}`}
-                key={href}
-                href={href}
-                onClick={(event) =>
-                  handleInternalLinkClick(event, href, { scrollToTop: true })
-                }
-              >
-                <span class="hero-category-label">{label}</span>
-                <span class="hero-count">
-                  {loading ? "…" : count.toLocaleString()}
-                </span>
-                <span class="hero-arrow" aria-hidden="true">
-                  ↗
-                </span>
-              </a>
-            ))}
-          </nav>
+          <HeroSearch catalog={catalog} loading={loading} />
         </div>
       </section>
 

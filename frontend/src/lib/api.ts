@@ -13,8 +13,8 @@ function typePath(entryType: EntryType): string {
   }
 }
 
-async function readJSON<T>(url: string): Promise<T> {
-  const response = await fetch(url);
+async function readJSON<T>(url: string, signal?: AbortSignal): Promise<T> {
+  const response = await fetch(url, signal ? { signal } : undefined);
   if (!response.ok) {
     throw new Error(
       `Request failed: ${response.status} ${response.statusText}`,
@@ -38,5 +38,12 @@ export const api = {
 
   fetchCreator(creatorSlug: string): Promise<EntrySummary[]> {
     return readJSON<EntrySummary[]>(`/api/creator/${creatorSlug}`);
+  },
+
+  search(query: string, signal?: AbortSignal): Promise<EntrySummary[]> {
+    return readJSON<EntrySummary[]>(
+      `/api/search?q=${encodeURIComponent(query)}`,
+      signal,
+    );
   },
 };

@@ -240,6 +240,111 @@ func (l *Library) Entry(entryID string) (Entry, bool) {
 	return entry, ok
 }
 
+const searchResultLimit = 50
+
+func (l *Library) Search(query string, limit int) []EntrySummary {
+	terms := searchTerms(query)
+	if len(terms) == 0 {
+		return []EntrySummary{}
+	}
+	if limit <= 0 || limit > searchResultLimit {
+		limit = searchResultLimit
+	}
+
+	type candidate struct {
+		entry Entry
+		score int
+	}
+	matches := make([]candidate, 0)
+	for _, entry := range l.all {
+		score, ok := entrySearchScore(entry, terms)
+		if !ok {
+			continue
+		}
+		matches = append(matches, candidate{entry: entry, score: score})
+	}
+
+	sort.SliceStable(matches, func(i, j int) bool {
+		if matches[i].score != matches[j].score {
+			return matches[i].score > matches[j].score
+		}
+		if !strings.EqualFold(matches[i].entry.EntryTitle, matches[j].entry.EntryTitle) {
+			return strings.ToLower(matches[i].entry.EntryTitle) < strings.ToLower(matches[j].entry.EntryTitle)
+		}
+		return strings.ToLower(matches[i].entry.Creator) < strings.ToLower(matches[j].entry.Creator)
+	})
+
+	if len(matches) > limit {
+		matches = matches[:limit]
+	}
+
+	results := make([]EntrySummary, len(matches))
+	for index, match := range matches {
+		results[index] = entrySummary(match.entry)
+	}
+	return results
+}
+
+func searchTerms(query string) []string {
+	fields := strings.Fields(strings.ToLower(query))
+	seen := make(map[string]bool, len(fields))
+	terms := make([]string, 0, len(fields))
+	for _, field := range fields {
+		if seen[field] {
+			continue
+		}
+		seen[field] = true
+		terms = append(terms, field)
+	}
+	return terms
+}
+
+func entrySearchScore(entry Entry, terms []string) (int, bool) {
+	fields := []struct {
+		text   string
+		weight int
+	}{
+		{text: strings.ToLower(entry.EntryTitle), weight: 4},
+		{text: strings.ToLower(entry.Creator), weight: 3},
+		{text: typeSearchKeywords(entry), weight: 2},
+		{text: strings.ToLower(entry.Description), weight: 1},
+	}
+
+	score := 0
+	for _, term := range terms {
+		matched := false
+		for _, field := range fields {
+			if field.text == "" || !strings.Contains(field.text, term) {
+				continue
+			}
+			score += field.weight
+			matched = true
+		}
+		if !matched {
+			return 0, false
+		}
+	}
+	return score, true
+}
+
+func typeSearchKeywords(entry Entry) string {
+	switch entry.Type {
+	case EntryTypeSeries:
+		return "series shows show"
+	case EntryTypeShort:
+		return "short shorts"
+	case EntryTypeShot:
+		return "shot shots one-shot one-shots"
+	case EntryTypeSong:
+		if entry.Subtype == EntrySubtypeAMV {
+			return "song songs amv"
+		}
+		return "song songs"
+	default:
+		return ""
+	}
+}
+
 func (l *Library) EpisodeAsset(episodeID string) (EpisodeAsset, bool) {
 	asset, ok := l.byEpisodeID[episodeID]
 	return asset, ok

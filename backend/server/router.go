@@ -8,6 +8,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"unicode/utf8"
 
 	"abridged-web/backend/catalog"
 	"abridged-web/frontend"
@@ -21,6 +22,7 @@ type Options struct {
 
 type appServer struct {
 	library *catalog.Library
+	search  searchCache
 }
 
 func NewRouter(library *catalog.Library, options Options) (*gin.Engine, error) {
@@ -40,6 +42,7 @@ func NewRouter(library *catalog.Library, options Options) (*gin.Engine, error) {
 	router.GET("/api/songs", server.handleSongs)
 	router.GET("/api/creator/:slug", server.handleCreator)
 	router.GET("/api/entry/:entryID", server.handleEntry)
+	router.GET("/api/search", server.handleSearch)
 	router.GET("/video/:assetID", server.handleVideo)
 	router.GET("/thumb/:assetID", server.handleThumb)
 
@@ -109,6 +112,30 @@ func (s *appServer) handleEntry(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, entry)
+}
+
+func (s *appServer) handleSearch(c *gin.Context) {
+	if !isSameOriginSearchRequest(c.Request) {
+		c.AbortWithStatus(http.StatusForbidden)
+		return
+	}
+
+	query := strings.TrimSpace(c.Query("q"))
+	if utf8.RuneCountInString(query) > maxSearchQueryLength ||
+		len(strings.Fields(query)) > maxSearchTerms {
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	key := normalizeSearchKey(query)
+	results, ok := s.search.get(key)
+	if !ok {
+		results = s.library.Search(query, 0)
+		s.search.set(key, results)
+	}
+
+	c.Header("Cache-Control", "private, max-age=60")
+	c.JSON(http.StatusOK, results)
 }
 
 func (s *appServer) handleVideo(c *gin.Context) {

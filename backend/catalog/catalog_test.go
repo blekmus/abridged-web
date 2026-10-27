@@ -183,3 +183,90 @@ func writeMetadataCacheFile(t *testing.T, root string, items map[string]cachedVi
 		t.Fatal(err)
 	}
 }
+
+func TestSearchMatchesCreatorTitleTypeKeywordsAndSubtype(t *testing.T) {
+	root := t.TempDir()
+	videoFiles := []string{
+		"Series/[TeamFourStar] Dragon Ball Z Abridged/Episode 1 - Start.mp4",
+		"Shorts/[PurpleEyesWTF] I'm at Soup/1.mp4",
+		"Songs/[TeamFourStar] Hype/1.mp4",
+		"Songs/AMV/[Something Witty] Sword Art Online - This Is War/1.mp4",
+	}
+	for _, relativePath := range videoFiles {
+		fullPath := filepath.Join(root, relativePath)
+		if err := os.MkdirAll(filepath.Dir(fullPath), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(fullPath, []byte("video"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	writeMetadataCacheFile(t, root, nil)
+
+	lib, err := Load(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cases := []struct {
+		name  string
+		query string
+		want  int
+	}{
+		{name: "creator", query: "teamfourstar", want: 2},
+		{name: "title", query: "abridged", want: 1},
+		{name: "series keyword", query: "shows", want: 1},
+		{name: "short keyword", query: "shorts", want: 1},
+		{name: "song keyword", query: "songs", want: 2},
+		{name: "amv subtype", query: "amv", want: 1},
+		{name: "multiple terms", query: "teamfourstar hype", want: 1},
+		{name: "all terms required", query: "teamfourstar soup", want: 0},
+		{name: "empty", query: "   ", want: 0},
+	}
+
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			results := lib.Search(testCase.query, 0)
+			if len(results) != testCase.want {
+				t.Fatalf("len(Search(%q)) = %d, want %d", testCase.query, len(results), testCase.want)
+			}
+		})
+	}
+}
+
+func TestSearchRespectsLimitAndPrioritizesTitleMatches(t *testing.T) {
+	root := t.TempDir()
+	videoFiles := []string{
+		"Series/[Creator A] Hype Show/Episode 1 - Start.mp4",
+		"Series/[Creator B] Other Show/Episode 1 - Start.mp4",
+		"Series/[Hype] Third Show/Episode 1 - Start.mp4",
+	}
+	for _, relativePath := range videoFiles {
+		fullPath := filepath.Join(root, relativePath)
+		if err := os.MkdirAll(filepath.Dir(fullPath), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(fullPath, []byte("video"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	writeMetadataCacheFile(t, root, nil)
+
+	lib, err := Load(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	results := lib.Search("hype", 0)
+	if len(results) != 2 {
+		t.Fatalf("len(Search(hype)) = %d, want 2", len(results))
+	}
+	if results[0].EntryTitle != "Hype Show" {
+		t.Fatalf("first result = %q, want Hype Show", results[0].EntryTitle)
+	}
+
+	limited := lib.Search("show", 1)
+	if len(limited) != 1 {
+		t.Fatalf("len(Search(show, 1)) = %d, want 1", len(limited))
+	}
+}
