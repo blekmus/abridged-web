@@ -1,9 +1,10 @@
-import type { ComponentChildren } from "preact";
-import { useState } from "preact/hooks";
+// import type { ComponentChildren } from "preact";
+// import { useState } from "preact/hooks";
 import type { CatalogResponse } from "../../lib/types";
 import { BrowseSection } from "../components/BrowseSection";
 import { InlineError } from "../components/InlineError";
 import { shuffledEntries } from "../entryUtils";
+import { handleInternalLinkClick } from "../navigation";
 import { optionalActiveEntryId } from "../propUtils";
 
 type RandomizedHomeEntries = CatalogResponse;
@@ -25,40 +26,69 @@ export function HomePage({
   restoreFromHistory: boolean;
   activeEntryId?: string;
 }) {
-  const heroStats = [
-    { label: "shows", count: catalog.series.length },
-    { label: "shorts", count: catalog.shorts.length },
-    { label: "one-shots", count: catalog.shots.length },
-    { label: "songs", count: catalog.songs.length + catalog.songAmvs.length },
+  const heroCategories = [
+    {
+      label: "Shows",
+      href: "/series",
+      accentClass: "accent-shows",
+      count: catalog.series.length,
+    },
+    {
+      label: "Shorts",
+      href: "/shorts",
+      accentClass: "accent-shorts",
+      count: catalog.shorts.length,
+    },
+    {
+      label: "One-shots",
+      href: "/shots",
+      accentClass: "accent-one-shots",
+      count: catalog.shots.length,
+    },
+    {
+      label: "Songs",
+      href: "/songs",
+      accentClass: "accent-songs",
+      count: catalog.songs.length + catalog.songAmvs.length,
+    },
   ];
   const randomizedHomeEntries = getRandomizedHomeEntries(catalog);
 
   return (
     <>
       <section class="hero">
-        <div class="container hero-grid">
-          <div>
+        <div class="container hero-content">
+          <div class="hero-heading">
+            <span class="hero-the">The</span>
             <h1 class="hero-title">
-              <span style={{ color: "#52dfff" }}>The</span>
-              <br />
-              <span style={{ color: "#34dcba" }}>Abridged</span>
-              <br />
-              <span style={{ color: "#ef3e78" }}>Catalogue</span>
+              <span class="hero-upright">Abridged</span>{" "}
+              <span class="hero-italic">Catalogue</span>
             </h1>
           </div>
-          <div class="hero-panel" aria-label="Catalog counts">
-            {heroStats.map((stat) => (
-              <div class={`hero-stat ${stat.label}-stat`} key={stat.label}>
-                <strong>{loading ? "..." : stat.count}</strong>
-                <span class="hero-stat-label">{stat.label}</span>
-              </div>
-            ))}
-          </div>
-
           <p class="hero-copy">
-            A catalogue of my favourite abridged anime now in web form. This is
-            more of an awareness effort than a full blown archive.
+            A collection of abridged anime,{" "}
+            <i>including the ones the companies tried to erase.</i>
           </p>
+          <nav class="hero-nav" aria-label="Browse the catalogue by format">
+            {heroCategories.map(({ label, href, accentClass, count }) => (
+              <a
+                class={`hero-category ${accentClass}`}
+                key={href}
+                href={href}
+                onClick={(event) =>
+                  handleInternalLinkClick(event, href, { scrollToTop: true })
+                }
+              >
+                <span class="hero-category-label">{label}</span>
+                <span class="hero-count">
+                  {loading ? "…" : count.toLocaleString()}
+                </span>
+                <span class="hero-arrow" aria-hidden="true">
+                  ↗
+                </span>
+              </a>
+            ))}
+          </nav>
         </div>
       </section>
 
@@ -104,7 +134,7 @@ export function HomePage({
         animateCards={!restoreFromHistory}
         loading={loading}
       />
-      <HomeQuestions />
+      {/* <HomeQuestions /> */}
     </>
   );
 }
@@ -129,127 +159,127 @@ function getRandomizedHomeEntries(
   return entries;
 }
 
-function HomeQuestions() {
-  const [openQuestion, setOpenQuestion] = useState<string | null>(
-    "Why does this exist?",
-  );
-  const questions: Array<{ question: string; answer: ComponentChildren }> = [
-    {
-      question: "Why does this exist?",
-      answer: (
-        <p>
-          I love going through this collection about once per year and I've done
-          everything I can to make that as seamless as possible. Maybe I'm
-          overengineering this a whole lot more than it needs to be, but I enjoy
-          it. I've already built a{" "}
-          <a
-            href="https://github.com/blekmus/abridged-cli"
-            target="_blank"
-            rel="noreferrer"
-          >
-            CLI
-          </a>{" "}
-          and a{" "}
-          <a href="https://github.com/blekmus/raycast-abridged">
-            Raycast Plugin
-          </a>{" "}
-          so a website is sort of the natural evolution.
-        </p>
-      ),
-    },
-    {
-      question: "Where can I find more?",
-      answer: (
-        <p>
-          Once upon a time I made a{" "}
-          <a
-            href="https://nyaa.si/view/1979033"
-            target="_blank"
-            rel="noreferrer"
-          >
-            torrent
-          </a>{" "}
-          with a bunch of the entries here. Other than that, there's always the{" "}
-          <a
-            target="_blank"
-            href="https://abridgedseries.fandom.com/wiki/Abridged_Archive"
-            rel="noreferrer"
-          >
-            abridged archive.
-          </a>
-        </p>
-      ),
-    },
-    {
-      question: "Why are some classics missing?",
-      answer: (
-        <p>
-          As much as I want to include every abridgedment out there, I'm limited
-          by how much storage I have on my server. So I decided to not host the
-          big titles that are already easily accessible.
-        </p>
-      ),
-    },
-    {
-      question: "How are shows, shorts, and one-shots split?",
-      answer: (
-        <>
-          <p>
-            <strong>Shows: </strong> A set of entries that run episodically or
-            are part of a series of works by a creator or group of creators.
-          </p>
-          <p>
-            <strong>One-shots: </strong> Single videos that are not part of a
-            continuous series but share an overarching story. These are usually
-            longer than 5 minutes.
-          </p>
-          <p>
-            <strong>Shorts: </strong>Similar to Shots, but shorter in length and
-            may not have a well-defined plot.
-          </p>
-        </>
-      ),
-    },
-  ];
+// function HomeQuestions() {
+//   const [openQuestion, setOpenQuestion] = useState<string | null>(
+//     "Why does this exist?",
+//   );
+//   const questions: Array<{ question: string; answer: ComponentChildren }> = [
+//     {
+//       question: "Why does this exist?",
+//       answer: (
+//         <p>
+//           I love going through this collection about once per year and I've done
+//           everything I can to make that as seamless as possible. Maybe I'm
+//           overengineering this a whole lot more than it needs to be, but I enjoy
+//           it. I've already built a{" "}
+//           <a
+//             href="https://github.com/blekmus/abridged-cli"
+//             target="_blank"
+//             rel="noreferrer"
+//           >
+//             CLI
+//           </a>{" "}
+//           and a{" "}
+//           <a href="https://github.com/blekmus/raycast-abridged">
+//             Raycast Plugin
+//           </a>{" "}
+//           so a website is sort of the natural evolution.
+//         </p>
+//       ),
+//     },
+//     {
+//       question: "Where can I find more?",
+//       answer: (
+//         <p>
+//           Once upon a time I made a{" "}
+//           <a
+//             href="https://nyaa.si/view/1979033"
+//             target="_blank"
+//             rel="noreferrer"
+//           >
+//             torrent
+//           </a>{" "}
+//           with a bunch of the entries here. Other than that, there's always the{" "}
+//           <a
+//             target="_blank"
+//             href="https://abridgedseries.fandom.com/wiki/Abridged_Archive"
+//             rel="noreferrer"
+//           >
+//             abridged archive.
+//           </a>
+//         </p>
+//       ),
+//     },
+//     {
+//       question: "Why are some classics missing?",
+//       answer: (
+//         <p>
+//           As much as I want to include every abridgedment out there, I'm limited
+//           by how much storage I have on my server. So I decided to not host the
+//           big titles that are already easily accessible.
+//         </p>
+//       ),
+//     },
+//     {
+//       question: "How are shows, shorts, and one-shots split?",
+//       answer: (
+//         <>
+//           <p>
+//             <strong>Shows: </strong> A set of entries that run episodically or
+//             are part of a series of works by a creator or group of creators.
+//           </p>
+//           <p>
+//             <strong>One-shots: </strong> Single videos that are not part of a
+//             continuous series but share an overarching story. These are usually
+//             longer than 5 minutes.
+//           </p>
+//           <p>
+//             <strong>Shorts: </strong>Similar to Shots, but shorter in length and
+//             may not have a well-defined plot.
+//           </p>
+//         </>
+//       ),
+//     },
+//   ];
 
-  return (
-    <section class="qa-section">
-      <div class="container qa-container">
-        <div class="qa-intro">
-          <h2 class="qa-title">Q&A</h2>
-        </div>
-        <div class="qa-list">
-          {questions.map((item) => (
-            <details
-              class="qa-item"
-              key={item.question}
-              open={openQuestion === item.question}
-            >
-              <summary
-                onClick={(event) => {
-                  event.preventDefault();
-                  setOpenQuestion((current) =>
-                    current === item.question ? null : item.question,
-                  );
-                }}
-                onKeyDown={(event) => {
-                  if (event.key !== "Enter" && event.key !== " ") {
-                    return;
-                  }
+//   return (
+//     <section class="qa-section">
+//       <div class="container qa-container">
+//         <div class="qa-intro">
+//           <h2 class="qa-title">Q&A</h2>
+//         </div>
+//         <div class="qa-list">
+//           {questions.map((item) => (
+//             <details
+//               class="qa-item"
+//               key={item.question}
+//               open={openQuestion === item.question}
+//             >
+//               <summary
+//                 onClick={(event) => {
+//                   event.preventDefault();
+//                   setOpenQuestion((current) =>
+//                     current === item.question ? null : item.question,
+//                   );
+//                 }}
+//                 onKeyDown={(event) => {
+//                   if (event.key !== "Enter" && event.key !== " ") {
+//                     return;
+//                   }
 
-                  event.preventDefault();
-                  setOpenQuestion((current) =>
-                    current === item.question ? null : item.question,
-                  );
-                }}
-              >
-                {item.question}
-              </summary>
-              <div class="qa-answer">{item.answer}</div>
-            </details>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
+//                   event.preventDefault();
+//                   setOpenQuestion((current) =>
+//                     current === item.question ? null : item.question,
+//                   );
+//                 }}
+//               >
+//                 {item.question}
+//               </summary>
+//               <div class="qa-answer">{item.answer}</div>
+//             </details>
+//           ))}
+//         </div>
+//       </div>
+//     </section>
+//   );
+// }

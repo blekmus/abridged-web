@@ -101,6 +101,8 @@ export function WatchPage({
           <video
             class="video-player"
             controls
+            autoPlay
+            playsInline
             preload="metadata"
             src={episode.videoUrl}
             poster={episode.thumbnailUrl}

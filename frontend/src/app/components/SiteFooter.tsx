@@ -4,10 +4,11 @@ export function SiteFooter() {
       <div class="container footer-simple">
         <span class="footer-rule" aria-hidden="true" />
         <p class="footer-credit">
-          Made with love by{" "}
-          <a href="https://garden.dinil.dev" target="_blank" rel="noreferrer">
-            blekmus
-          </a>
+          That's all folks!
+          <br />
+          See you in the next barely legal site.
+          <br />
+          <span style={{color: "var(--color-border)"}}>God I hope this doesn't get nuked as well</span>
         </p>
       </div>
     </footer>
