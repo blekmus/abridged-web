@@ -133,17 +133,26 @@ export function formatDurationLabel(durationSeconds: number): string {
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
 
+export function findEpisode(
+  entry: Entry,
+  requestedEpisodeSlug?: string,
+): Episode | undefined {
+  if (!requestedEpisodeSlug) {
+    return undefined;
+  }
+
+  return entry.episodes.find(
+    (episode) => episodeSlug(episode) === requestedEpisodeSlug,
+  );
+}
+
 export function chooseEpisode(
   entry: Entry,
   requestedEpisodeSlug?: string,
 ): Episode {
-  if (requestedEpisodeSlug) {
-    const matched = entry.episodes.find(
-      (episode) => episodeSlug(episode) === requestedEpisodeSlug,
-    );
-    if (matched) {
-      return matched;
-    }
+  const matched = findEpisode(entry, requestedEpisodeSlug);
+  if (matched) {
+    return matched;
   }
 
   return (

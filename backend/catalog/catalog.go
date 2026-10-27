@@ -5,7 +5,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -13,6 +14,8 @@ import (
 	"strconv"
 	"strings"
 	"unicode"
+
+	"golang.org/x/text/unicode/norm"
 )
 
 type EntryType string
@@ -121,12 +124,19 @@ type videoMetadataCacheStats struct {
 	statExamples  []string
 }
 
+type CreatorSummary struct {
+	Slug       string `json:"slug"`
+	Name       string `json:"name"`
+	EntryCount int    `json:"entryCount"`
+}
+
 type CatalogResponse struct {
-	Series   []EntrySummary `json:"series"`
-	Shorts   []EntrySummary `json:"shorts"`
-	Shots    []EntrySummary `json:"shots"`
-	Songs    []EntrySummary `json:"songs"`
-	SongAMVs []EntrySummary `json:"songAmvs"`
+	Series   []EntrySummary   `json:"series"`
+	Shorts   []EntrySummary   `json:"shorts"`
+	Shots    []EntrySummary   `json:"shots"`
+	Songs    []EntrySummary   `json:"songs"`
+	SongAMVs []EntrySummary   `json:"songAmvs"`
+	Creators []CreatorSummary `json:"creators"`
 }
 
 type Library struct {
@@ -137,6 +147,7 @@ type Library struct {
 	byEntryID     map[string]Entry
 	byEpisodeID   map[string]EpisodeAsset
 	byCreatorSlug map[string][]Entry
+	cacheTag      string
 }
 
 var (
@@ -151,7 +162,7 @@ func Load(root string) (*Library, error) {
 	if err != nil {
 		return nil, fmt.Errorf("resolve archive root: %w", err)
 	}
-	log.Printf("catalog: load started archive_root=%q", absRoot)
+	slog.Info("catalog load started", "archive_root", absRoot)
 	if err := validateArchiveRoot(absRoot); err != nil {
 		return nil, err
 	}
@@ -186,7 +197,7 @@ func Load(root string) (*Library, error) {
 			return nil, scanErr
 		}
 		lib.registerEntries(category.kind, entries)
-		log.Printf("catalog: registered category type=%s entries=%d total_episodes=%d", category.kind, len(entries), countEpisodes(entries))
+		slog.Info("catalog category registered", "type", category.kind, "entries", len(entries), "total_episodes", countEpisodes(entries))
 
 		if category.kind == EntryTypeSong {
 			amvs, scanErr := lib.scanCategory(filepath.Join(absRoot, category.dir, "AMV"), category.kind, EntrySubtypeAMV)
@@ -194,13 +205,48 @@ func Load(root string) (*Library, error) {
 				return nil, scanErr
 			}
 			lib.registerEntries(category.kind, amvs)
-			log.Printf("catalog: registered category type=%s subtype=%s entries=%d total_episodes=%d", category.kind, EntrySubtypeAMV, len(amvs), countEpisodes(amvs))
+			slog.Info("catalog category registered", "type", category.kind, "subtype", EntrySubtypeAMV, "entries", len(amvs), "total_episodes", countEpisodes(amvs))
 		}
 	}
 
-	log.Printf("catalog: load complete entries=%d episodes=%d", len(lib.all), len(lib.byEpisodeID))
+	cacheTag, err := catalogueCacheTag(lib.all)
+	if err != nil {
+		return nil, err
+	}
+	lib.cacheTag = cacheTag
+
+	slog.Info("catalog load complete", "entries", len(lib.all), "episodes", len(lib.byEpisodeID), "cache_tag", cacheTag)
 	metadata.logLookupSummary()
 	return lib, nil
+}
+
+// CacheTag changes whenever the in-memory catalogue content changes. It is used
+// as the ETag for JSON responses. Video and thumbnail content is validated
+// separately with file metadata because those URLs are stable across re-encodes.
+func (l *Library) CacheTag() string {
+	return l.cacheTag
+}
+
+// catalogueCacheVersion must be bumped whenever the shape of an API response
+// changes. Without it, a client holding a pre-deploy ETag would receive a 304
+// and keep using a response that the new frontend can no longer parse.
+const catalogueCacheVersion = 2
+
+func catalogueCacheTag(entries []Entry) (string, error) {
+	data, err := json.Marshal(entries)
+	if err != nil {
+		return "", fmt.Errorf("hash catalogue: %w", err)
+	}
+
+	hash := sha1.New()
+	if _, err := fmt.Fprintf(hash, "catalogue-v%d\n", catalogueCacheVersion); err != nil {
+		return "", fmt.Errorf("hash catalogue: %w", err)
+	}
+	if _, err := hash.Write(data); err != nil {
+		return "", fmt.Errorf("hash catalogue: %w", err)
+	}
+
+	return `"` + hex.EncodeToString(hash.Sum(nil)) + `"`, nil
 }
 
 func validateArchiveRoot(root string) error {
@@ -224,7 +270,33 @@ func (l *Library) CatalogResponse() CatalogResponse {
 		Shots:    entrySummaries(l.byType[EntryTypeShot]),
 		Songs:    entrySummaries(entriesWithSubtype(l.byType[EntryTypeSong], "")),
 		SongAMVs: entrySummaries(entriesWithSubtype(l.byType[EntryTypeSong], EntrySubtypeAMV)),
+		Creators: l.creatorSummaries(),
 	}
+}
+
+func (l *Library) creatorSummaries() []CreatorSummary {
+	summaries := make([]CreatorSummary, 0, len(l.byCreatorSlug))
+	for slug, entries := range l.byCreatorSlug {
+		if len(entries) == 0 {
+			continue
+		}
+		summaries = append(summaries, CreatorSummary{
+			Slug:       slug,
+			Name:       entries[0].Creator,
+			EntryCount: len(entries),
+		})
+	}
+
+	sort.Slice(summaries, func(i, j int) bool {
+		left := strings.ToLower(summaries[i].Name)
+		right := strings.ToLower(summaries[j].Name)
+		if left != right {
+			return left < right
+		}
+		return summaries[i].Slug < summaries[j].Slug
+	})
+
+	return summaries
 }
 
 func (l *Library) EntriesForType(entryType EntryType) []EntrySummary {
@@ -235,9 +307,66 @@ func (l *Library) EntriesForCreator(slug string) []EntrySummary {
 	return entrySummaries(l.byCreatorSlug[slug])
 }
 
+func (l *Library) HasCreator(slug string) bool {
+	return len(l.byCreatorSlug[slug]) > 0
+}
+
+func (l *Library) CreatorName(slug string) (string, bool) {
+	entries := l.byCreatorSlug[slug]
+	if len(entries) == 0 {
+		return "", false
+	}
+	return entries[0].Creator, true
+}
+
+// EntryForWatchPath mirrors frontend/src/app/watchPaths.ts so the server can
+// distinguish a real watch URL from a 404 before serving the SPA shell.
+func (l *Library) EntryForWatchPath(creatorSlug string, entrySlug string) (Entry, bool) {
+	for _, entry := range l.byCreatorSlug[creatorSlug] {
+		if routeSlug(entry.EntryTitle) == entrySlug {
+			return entry, true
+		}
+	}
+	return Entry{}, false
+}
+
+func (l *Library) EpisodeForWatchPath(entry Entry, episodeSlug string) (Episode, bool) {
+	for _, episode := range entry.Episodes {
+		title := episode.DisplayTitle
+		if title == "" {
+			title = episode.VideoTitle
+		}
+		if routeSlug(title) == episodeSlug {
+			return episode, true
+		}
+	}
+	return Episode{}, false
+}
+
 func (l *Library) Entry(entryID string) (Entry, bool) {
 	entry, ok := l.byEntryID[entryID]
 	return entry, ok
+}
+
+// Entries returns a copy of the full catalogue for consumers that need episode
+// data rather than the summary shape used by browse responses.
+func (l *Library) Entries() []Entry {
+	return cloneEntries(l.all)
+}
+
+// WatchPath is the canonical entry URL. It mirrors entryWatchPath in
+// frontend/src/app/watchPaths.ts.
+func (e Entry) WatchPath() string {
+	return "/" + url.PathEscape(e.CreatorSlug) + "/" + url.PathEscape(routeSlug(e.EntryTitle))
+}
+
+// WatchPath is the canonical episode URL for an entry.
+func (e Episode) WatchPath(entry Entry) string {
+	title := e.DisplayTitle
+	if title == "" {
+		title = e.VideoTitle
+	}
+	return entry.WatchPath() + "/" + url.PathEscape(routeSlug(title))
 }
 
 const searchResultLimit = 50
@@ -369,12 +498,12 @@ func (l *Library) scanCategory(categoryPath string, entryType EntryType, subtype
 	items, err := os.ReadDir(categoryPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			log.Printf("catalog: category missing path=%q type=%s subtype=%s", categoryPath, entryType, firstSubtype(subtype))
+			slog.Info("catalog category missing", "path", categoryPath, "type", entryType, "subtype", firstSubtype(subtype))
 			return nil, nil
 		}
 		return nil, fmt.Errorf("read category %s: %w", categoryPath, err)
 	}
-	log.Printf("catalog: category scan started path=%q type=%s subtype=%s items=%d", categoryPath, entryType, firstSubtype(subtype), len(items))
+	slog.Info("catalog category scan started", "path", categoryPath, "type", entryType, "subtype", firstSubtype(subtype), "items", len(items))
 
 	var entries []Entry
 	entrySubtype := firstSubtype(subtype)
@@ -485,7 +614,7 @@ func (l *Library) scanSingleRelease(entryPath, entryID string, entryType EntryTy
 			videoPath = candidate
 			break
 		} else if !os.IsNotExist(err) {
-			log.Printf("catalog: failed to stat single-release video candidate path=%q err=%v", candidate, err)
+			slog.Warn("catalog failed to stat single-release video", "path", candidate, "err", err)
 		}
 	}
 	if videoPath == "" {
@@ -707,13 +836,13 @@ func readEntryDescription(entryPath string) string {
 		if data, err := os.ReadFile(fullPath); err == nil {
 			return strings.TrimSpace(string(data))
 		} else if !os.IsNotExist(err) {
-			log.Printf("catalog: failed to read entry description candidate path=%q err=%v", fullPath, err)
+			slog.Warn("catalog failed to read entry description", "path", fullPath, "err", err)
 		}
 	}
 
 	items, err := os.ReadDir(entryPath)
 	if err != nil {
-		log.Printf("catalog: failed to read entry directory while searching descriptions path=%q err=%v", entryPath, err)
+		slog.Warn("catalog failed to read entry directory while searching descriptions", "path", entryPath, "err", err)
 		return ""
 	}
 
@@ -729,7 +858,7 @@ func readEntryDescription(entryPath string) string {
 		if err == nil {
 			return strings.TrimSpace(string(data))
 		} else {
-			log.Printf("catalog: failed to read fallback entry description path=%q err=%v", filepath.Join(entryPath, item.Name()), err)
+			slog.Warn("catalog failed to read fallback entry description", "path", filepath.Join(entryPath, item.Name()), "err", err)
 		}
 	}
 
@@ -747,11 +876,11 @@ func newVideoMetadataCache(root string) (*videoMetadataCache, error) {
 		path:  filepath.Join(root, videoMetadataCacheFilename),
 		items: map[string]cachedVideoMetadata{},
 	}
-	log.Printf("metadata: loading cache root=%q path=%q", cache.root, cache.path)
+	slog.Info("metadata cache loading", "root", cache.root, "path", cache.path)
 	if err := cache.load(); err != nil {
 		return nil, err
 	}
-	log.Printf("metadata: cache ready path=%q normalized_items=%d", cache.path, len(cache.items))
+	slog.Info("metadata cache ready", "path", cache.path, "normalized_items", len(cache.items))
 	return cache, nil
 }
 
@@ -763,7 +892,7 @@ func (c *videoMetadataCache) load() error {
 		}
 		return fmt.Errorf("read metadata file %s: %w", c.path, err)
 	}
-	log.Printf("metadata: cache file read path=%q bytes=%d", c.path, len(data))
+	slog.Info("metadata cache file read", "path", c.path, "bytes", len(data))
 
 	var payload videoMetadataCacheFile
 	if err := json.Unmarshal(data, &payload); err != nil {
@@ -772,10 +901,10 @@ func (c *videoMetadataCache) load() error {
 	if payload.Version != videoMetadataCacheVersion || payload.Items == nil {
 		return fmt.Errorf("metadata file %s is not a valid cache file", c.path)
 	}
-	log.Printf("metadata: cache file parsed path=%q version=%d raw_items=%d", c.path, payload.Version, len(payload.Items))
+	slog.Info("metadata cache file parsed", "path", c.path, "version", payload.Version, "raw_items", len(payload.Items))
 
 	c.items = normalizeVideoMetadataItems(payload.Items)
-	log.Printf("metadata: cache normalized path=%q raw_items=%d normalized_items=%d", c.path, len(payload.Items), len(c.items))
+	slog.Info("metadata cache normalized", "path", c.path, "raw_items", len(payload.Items), "normalized_items", len(c.items))
 	return nil
 }
 
@@ -784,7 +913,7 @@ func (c *videoMetadataCache) Read(videoPath string) videoMetadata {
 	if err != nil {
 		c.stats.statFailures++
 		appendExample(&c.stats.statExamples, fmt.Sprintf("%s: %v", videoPath, err))
-		log.Printf("metadata: failed to stat video for metadata lookup path=%q err=%v", videoPath, err)
+		slog.Warn("metadata failed to stat video", "path", videoPath, "err", err)
 		return videoMetadata{}
 	}
 
@@ -812,7 +941,13 @@ func (c *videoMetadataCache) Read(videoPath string) videoMetadata {
 }
 
 func (c *videoMetadataCache) logLookupSummary() {
-	log.Printf("metadata: lookup summary matched_videos=%d videos_without_metadata=%d videos_with_outdated_metadata=%d video_stat_failures=%d", c.stats.hits, c.stats.misses, c.stats.stale, c.stats.statFailures)
+	slog.Info(
+		"metadata lookup summary",
+		"matched_videos", c.stats.hits,
+		"videos_without_metadata", c.stats.misses,
+		"videos_with_outdated_metadata", c.stats.stale,
+		"video_stat_failures", c.stats.statFailures,
+	)
 	logExamples("metadata: videos without metadata entries", c.stats.missExamples)
 	logExamples("metadata: videos with outdated metadata entries", c.stats.staleExamples)
 	logExamples("metadata: stat failure examples", c.stats.statExamples)
@@ -829,7 +964,7 @@ func logExamples(prefix string, examples []string) {
 	if len(examples) == 0 {
 		return
 	}
-	log.Printf("%s count=%d examples=%q", prefix, len(examples), examples)
+	slog.Info(prefix, "count", len(examples), "examples", examples)
 }
 
 func (c *videoMetadataCache) keys(videoPath string) []string {
@@ -860,7 +995,7 @@ func normalizeVideoMetadataItems(items map[string]cachedVideoMetadata) map[strin
 	for key, metadata := range items {
 		for _, normalizedKey := range metadataKeyAliases(key) {
 			if normalizedKey == "" {
-				log.Printf("metadata: ignored empty normalized key original_key=%q", key)
+				slog.Warn("metadata ignored empty normalized key", "original_key", key)
 				continue
 			}
 			normalized[normalizedKey] = metadata
@@ -899,7 +1034,7 @@ func (m cachedVideoMetadata) metadata() videoMetadata {
 
 func (l *Library) readVideoMetadata(videoPath string) videoMetadata {
 	if l.metadata == nil {
-		log.Printf("metadata: metadata cache unavailable video=%q", videoPath)
+		slog.Warn("metadata cache unavailable", "video", videoPath)
 		return videoMetadata{}
 	}
 	return l.metadata.Read(videoPath)
@@ -954,6 +1089,39 @@ func slugify(value string) string {
 	slug := strings.Trim(b.String(), "-")
 	if slug == "" {
 		return "unknown"
+	}
+	return slug
+}
+
+// routeSlug is the server-side equivalent of slugifyPathSegment in
+// frontend/src/app/watchPaths.ts. It must stay in sync with that function
+// because the server uses it to decide whether a watch URL is a real 200 or a
+// 404 before the SPA loads.
+func routeSlug(value string) string {
+	value = strings.ToLower(strings.TrimSpace(value))
+	value = strings.ReplaceAll(value, "&", " and ")
+
+	var b strings.Builder
+	lastDash := false
+
+	for _, r := range norm.NFKD.String(value) {
+		if unicode.Is(unicode.Mn, r) {
+			continue
+		}
+
+		switch {
+		case r >= 'a' && r <= 'z' || r >= '0' && r <= '9':
+			b.WriteRune(r)
+			lastDash = false
+		case !lastDash:
+			b.WriteByte('-')
+			lastDash = true
+		}
+	}
+
+	slug := strings.Trim(b.String(), "-")
+	if slug == "" {
+		return "untitled"
 	}
 	return slug
 }

@@ -22,7 +22,7 @@ COPY backend ./backend
 COPY frontend/assets.go ./frontend/assets.go
 COPY --from=frontend /app/frontend/dist ./frontend/dist
 
-RUN APP_ENV=production CGO_ENABLED=0 GOOS=linux go build -o /usr/local/bin/abridged ./main.go
+RUN APP_ENV=production CGO_ENABLED=0 GOOS=linux go build -o /usr/local/bin/abridged .
 
 
 FROM alpine:3.22 AS runtime

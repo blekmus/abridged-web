@@ -49,10 +49,17 @@ export type EntrySummary = {
   poster: EpisodeCard;
 };
 
+export type CreatorSummary = {
+  slug: string;
+  name: string;
+  entryCount: number;
+};
+
 export type CatalogResponse = {
   series: EntrySummary[];
   shorts: EntrySummary[];
   shots: EntrySummary[];
   songs: EntrySummary[];
   songAmvs: EntrySummary[];
+  creators: CreatorSummary[];
 };

@@ -224,6 +224,12 @@ export function HeroSearch({
       count: catalog.songs.length + catalog.songAmvs.length,
       className: "accent-songs",
     },
+    {
+      label: "Creators",
+      href: "/creators",
+      count: catalog.creators.length,
+      className: "accent-creators",
+    },
   ];
 
   return (
@@ -335,11 +341,7 @@ export function HeroSearch({
         </button>
       </div>
 
-      <nav
-        class="search-stats"
-        aria-label="Catalogue counts by format"
-        inert={expanded}
-      >
+      <nav class="search-stats" aria-label="Catalogue counts" inert={expanded}>
         {stats.map(({ label, href, count, className }) => (
           <a
             key={href}
@@ -485,7 +487,7 @@ export function HeroSearch({
                     class="search-status-label search-status-punchline"
                     aria-hidden={!surprisePunchline}
                   >
-                    Woah! Absolutely nothing happened. Congratulations!!
+                    Woah! Nothing happened!! Congratulations!!!
                   </span>
                 </span>
               )}

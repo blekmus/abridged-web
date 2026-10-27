@@ -6,6 +6,7 @@ export const EMPTY_CATALOG: CatalogResponse = {
   shots: [],
   songs: [],
   songAmvs: [],
+  creators: [],
 };
 
 export const TYPE_META: Record<

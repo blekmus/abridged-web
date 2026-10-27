@@ -8,6 +8,7 @@ import { TYPE_META } from "../constants";
 import {
   accentClassForEntryType,
   chooseEpisode,
+  findEpisode,
   formatEpisodeDate,
   watchTypeLabel,
 } from "../entryUtils";
@@ -15,6 +16,7 @@ import { handleInternalLinkClick } from "../navigation";
 import { setPageTitle } from "../pageTitle";
 import type { AsyncState } from "../types";
 import { episodeWatchPath } from "../watchPaths";
+import { NotFoundPage } from "./NotFoundPage";
 
 const PLAYER_VOLUME_STORAGE_KEY = "abridged-player-volume";
 const PLAYER_MUTED_STORAGE_KEY = "abridged-player-muted";
@@ -67,8 +69,15 @@ export function WatchPage({
     }
 
     const entry = state.data;
-    const episode = chooseEpisode(entry, episodeSlug);
-    const episodeTitle = episode.displayTitle || episode.videoTitle;
+    const episode = findEpisode(entry, episodeSlug);
+    if (episodeSlug !== undefined && !episode) {
+      setPageTitle("Not Found");
+      return;
+    }
+
+    const resolvedEpisode = episode ?? chooseEpisode(entry);
+    const episodeTitle =
+      resolvedEpisode.displayTitle || resolvedEpisode.videoTitle;
     setPageTitle(
       episodeSlug ? `${entry.entryTitle} - ${episodeTitle}` : entry.entryTitle,
     );
@@ -83,7 +92,12 @@ export function WatchPage({
   }
 
   const entry = state.data;
-  const episode = chooseEpisode(entry, episodeSlug);
+  const requestedEpisode = findEpisode(entry, episodeSlug);
+  if (episodeSlug !== undefined && !requestedEpisode) {
+    return <NotFoundPage />;
+  }
+
+  const episode = requestedEpisode ?? chooseEpisode(entry);
   const episodeTitle = episode.displayTitle || episode.videoTitle;
   const description = episode.description || entry.description;
   const episodeDate = formatEpisodeDate(episode.date);

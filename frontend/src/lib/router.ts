@@ -5,6 +5,7 @@ export const APP_NAVIGATION_EVENT = "abridged:navigate";
 export type Route =
   | { name: "home" }
   | { name: "browse"; entryType: EntryType }
+  | { name: "creators" }
   | { name: "creator"; slug: string }
   | {
       name: "watch-path";
@@ -90,6 +91,9 @@ export function parseRoute(pathname: string): Route {
     }
     if (slug === "songs") {
       return { name: "browse", entryType: "song" };
+    }
+    if (slug === "creators") {
+      return { name: "creators" };
     }
 
     if (slug) {

@@ -3,13 +3,17 @@
 import { useEffect } from "preact/hooks";
 import type { CatalogResponse } from "../../lib/types";
 import { BrowseSection } from "../components/BrowseSection";
+import { CreatorIndex } from "../components/CreatorIndex";
 import { HeroSearch } from "../components/HeroSearch";
 import { InlineError } from "../components/InlineError";
 import { scheduleEntrySurprisePreparation } from "../effects/entrySurprisePreparation";
 import { shuffledEntries } from "../entryUtils";
 import { optionalActiveEntryId } from "../propUtils";
 
-type RandomizedHomeEntries = CatalogResponse;
+type RandomizedHomeEntries = Pick<
+  CatalogResponse,
+  "series" | "shorts" | "shots" | "songs" | "songAmvs" | "creators"
+>;
 
 let cachedRandomizedHomeEntries:
   | { source: CatalogResponse; entries: RandomizedHomeEntries }
@@ -93,6 +97,10 @@ export function HomePage({
         animateCards={!restoreFromHistory}
         loading={loading}
       />
+      <CreatorIndex
+        creators={randomizedHomeEntries.creators}
+        loading={loading}
+      />
       {/* <HomeQuestions /> */}
     </>
   );
@@ -111,6 +119,7 @@ function getRandomizedHomeEntries(
     shots: shuffledEntries(catalog.shots),
     songs: shuffledEntries(catalog.songs),
     songAmvs: shuffledEntries(catalog.songAmvs),
+    creators: shuffledEntries(catalog.creators).slice(0, 10),
   };
 
   cachedRandomizedHomeEntries = { source: catalog, entries };

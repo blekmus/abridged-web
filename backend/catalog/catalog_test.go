@@ -270,3 +270,106 @@ func TestSearchRespectsLimitAndPrioritizesTitleMatches(t *testing.T) {
 		t.Fatalf("len(Search(show, 1)) = %d, want 1", len(limited))
 	}
 }
+
+func TestCacheTagTracksCatalogueContent(t *testing.T) {
+	root := t.TempDir()
+	writeMetadataCacheFile(t, root, nil)
+
+	writeShort := func(name string) {
+		t.Helper()
+		videoPath := filepath.Join(root, "Shorts", "[Creator] "+name, "1.mp4")
+		if err := os.MkdirAll(filepath.Dir(videoPath), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(videoPath, []byte("video"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	writeShort("First")
+
+	first, err := Load(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	firstTag := first.CacheTag()
+	if firstTag == "" {
+		t.Fatal("CacheTag() is empty")
+	}
+
+	again, err := Load(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := again.CacheTag(); got != firstTag {
+		t.Fatalf("CacheTag() changed without a catalogue change: %q != %q", got, firstTag)
+	}
+
+	writeShort("Second")
+
+	changed, err := Load(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := changed.CacheTag(); got == firstTag {
+		t.Fatal("CacheTag() did not change after the catalogue changed")
+	}
+}
+
+func TestRouteSlugMatchesFrontendBehaviour(t *testing.T) {
+	cases := []struct {
+		input string
+		want  string
+	}{
+		{input: "Episode 1 - Start", want: "episode-1-start"},
+		{input: "I'm at Soup", want: "i-m-at-soup"},
+		{input: "A & B", want: "a-and-b"},
+		{input: "Pokémon", want: "pokemon"},
+		{input: "  --Hello, World!--  ", want: "hello-world"},
+		{input: "Sword Art Online - This Is War", want: "sword-art-online-this-is-war"},
+		{input: "", want: "untitled"},
+	}
+
+	for _, testCase := range cases {
+		t.Run(testCase.input, func(t *testing.T) {
+			if got := routeSlug(testCase.input); got != testCase.want {
+				t.Fatalf("routeSlug(%q) = %q, want %q", testCase.input, got, testCase.want)
+			}
+		})
+	}
+}
+
+func TestCatalogCreatorsAreSortedAndCounted(t *testing.T) {
+	root := t.TempDir()
+	videoFiles := []string{
+		"Shorts/[Beta] B Short/1.mp4",
+		"Songs/[Alpha] A Song/1.mp4",
+		"Series/[Alpha] A Show/Episode 1 - Start.mp4",
+	}
+	for _, relativePath := range videoFiles {
+		fullPath := filepath.Join(root, relativePath)
+		if err := os.MkdirAll(filepath.Dir(fullPath), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(fullPath, []byte("video"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	writeMetadataCacheFile(t, root, nil)
+
+	lib, err := Load(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	creators := lib.CatalogResponse().Creators
+	if len(creators) != 2 {
+		t.Fatalf("len(Creators) = %d, want 2", len(creators))
+	}
+	if creators[0].Name != "Alpha" || creators[0].Slug != "alpha" || creators[0].EntryCount != 2 {
+		t.Fatalf("creators[0] = %+v, want Alpha with 2 entries", creators[0])
+	}
+	if creators[1].Name != "Beta" || creators[1].Slug != "beta" || creators[1].EntryCount != 1 {
+		t.Fatalf("creators[1] = %+v, want Beta with 1 entry", creators[1])
+	}
+}

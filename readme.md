@@ -33,6 +33,13 @@ The whole thing ships as a single Docker image with no external dependencies bey
 | `PORT` | `8080` | HTTP server port |
 | `ARCHIVE_ROOT` | `../archive` | Path to the archive directory |
 | `APP_ENV` | `development` | Set to `production` for production logging/runtime mode |
+| `LOG_LEVEL` | `info` | `debug`, `info`, `warn`, or `error` |
+| `LOG_FORMAT` | `text` in development, `json` in production | `text` or `json` |
+| `PUBLIC_BASE_URL` | derived from the request | Absolute origin used in `robots.txt` and `sitemap.xml`, e.g. `https://abridged.example.com` |
+
+App-layer security headers (CSP, COOP, CORP, Permissions-Policy) live in `backend/server/security.go`. HSTS is left to the TLS terminator. If the analytics host changes, update `analyticsOrigin` there as well.
+
+Set `PUBLIC_BASE_URL` in production so `robots.txt` and `sitemap.xml` use a stable absolute origin instead of relying on `Host`/`X-Forwarded-Proto`.
 
 Needs an archive directory accessible at runtime with `ARCHIVE_ROOT/.abridged-video-metadata.json` at its root, and read access to the videos, thumbnails, and metadata for the process user.
  
@@ -62,7 +69,7 @@ bun run dev
 ```
  
 ```sh
-go run ./main.go
+go run .
 ```
 
 ### Building
@@ -83,7 +90,7 @@ Running the go server manually;
  
 ```sh
 bun run build
-APP_ENV=production go build -o abridged ./main.go
+APP_ENV=production go build -o abridged .
 ```
  
 ```sh

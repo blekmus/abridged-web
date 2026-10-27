@@ -1,4 +1,4 @@
-export const SITE_TITLE = "Abridged Catelogue";
+export const SITE_TITLE = "Abridged Catalogue";
 
 export function pageTitle(title?: string): string {
   const trimmedTitle = title?.trim();

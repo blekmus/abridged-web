@@ -159,6 +159,10 @@ video {
   --accent: var(--accent-songs);
 }
 
+.accent-creators {
+  --accent: var(--accent-creator);
+}
+
 .site-mark,
 .mobile-menu-toggle,
 .nav-link,
@@ -1089,7 +1093,9 @@ video {
 .section-title-link.accent-shorts:hover,
 .section-title-link.accent-shorts:focus-visible,
 .section-title-link.accent-songs:hover,
-.section-title-link.accent-songs:focus-visible {
+.section-title-link.accent-songs:focus-visible,
+.section-title-link.accent-creators:hover,
+.section-title-link.accent-creators:focus-visible {
   border-color: color-mix(in srgb, var(--accent) 42%, #000);
   background: color-mix(in srgb, var(--accent) 10%, #0a0a0a);
 }
@@ -1117,6 +1123,119 @@ video {
   grid-template-columns: repeat(auto-fill,
       minmax(min(100%, var(--card-min)), 1fr));
   gap: var(--space-6);
+}
+
+.creator-billing {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  margin-top: -15px;
+}
+
+.creator-billing li {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.creator-billing-entry {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: var(--space-4);
+  padding: 10px 0;
+  color: var(--color-title);
+  transition: color 120ms ease;
+}
+
+.creator-billing-name {
+  color: var(--color-title);
+  font-family: var(--font-display);
+  font-size: clamp(1.8rem, 4vw, 3.4rem);
+  line-height: 0.86;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  transition: color 120ms ease;
+}
+
+.creator-billing-count {
+  color: var(--color-muted);
+  font-family: var(--font-display);
+  font-size: 0.62rem;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  white-space: nowrap;
+  transition: color 120ms ease;
+}
+
+.creator-billing-entry:hover .creator-billing-count,
+.creator-billing-entry:focus-visible .creator-billing-count {
+  color: color-mix(in srgb, var(--color-title) 45%, var(--color-muted));
+}
+
+.creator-billing-entry:hover .creator-billing-name,
+.creator-billing-entry:focus-visible .creator-billing-name {
+  color: var(--accent-creator);
+}
+
+.creator-billing-entry:focus-visible {
+  outline: 1px solid var(--color-title);
+  outline-offset: 3px;
+}
+
+.creator-billing.is-compact {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: var(--space-10);
+}
+
+.creator-billing.is-compact .creator-billing-name {
+  font-size: clamp(1.4rem, 2.4vw, 2.2rem);
+}
+
+.creator-loading-grid {
+  display: grid;
+  gap: 0;
+  padding: 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.creator-loading-grid.is-compact {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: var(--space-10);
+}
+
+.creator-loading-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: 12px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.creator-loading-row .skeleton-line:last-child {
+  width: 4rem;
+}
+
+@media (max-width: 900px) {
+  .creator-billing.is-compact,
+  .creator-loading-grid.is-compact {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .creator-billing-entry {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+  }
+
+  .creator-billing-count {
+    justify-self: start;
+  }
+}
+
+#creators {
+  scroll-margin-top: var(--space-6);
 }
 
 .browse-card {

@@ -22,6 +22,7 @@ import { scrollPageToHash, scrollPageToPosition } from "./navigation";
 import { setPageTitle } from "./pageTitle";
 import { BrowsePage } from "./pages/BrowsePage";
 import { CreatorPage } from "./pages/CreatorPage";
+import { CreatorsPage } from "./pages/CreatorsPage";
 import { HomePage } from "./pages/HomePage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { WatchPage } from "./pages/WatchPage";
@@ -179,6 +180,13 @@ export function App() {
             {...optionalActiveEntryId(activeWatchEntryId)}
           />
         )}
+        {route.name === "creators" && (
+          <CreatorsPage
+            creators={catalog.creators}
+            loading={catalogState.loading}
+            error={catalogState.error}
+          />
+        )}
         {route.name === "creator" && (
           <CreatorPage
             slug={route.slug}
@@ -233,6 +241,9 @@ function useRoutePageTitle(
         return;
       case "browse":
         setPageTitle(TYPE_META[route.entryType].title);
+        return;
+      case "creators":
+        setPageTitle("Creators");
         return;
       case "creator":
         setPageTitle(route.slug.replace(/-/g, " "));
