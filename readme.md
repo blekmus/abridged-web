@@ -15,7 +15,8 @@ There was also a brief detour into [electron-abridged](https://github.com/blekmu
 
 This was when I daily drove linux, then after a few years I moved on to a macbook and got introduced to [Raycast](https://www.raycast.com/) and its plugin ecosystem. After building a few quality of life plugins and contributing on their plugin marketplace, I decided to port the abridged-cli into it. That became [raycast-abridged](https://github.com/blekmus/raycast-abridged), and for a while that was good enough. 
 
-The idea of a web version floated around for a while without going anywhere until coding agents entered the picture. Pointing `codex` at the existing metadata reading logic and asking it to port everything to Go produced a near-complete implementation on the first prompt. It made a few uncalled for assumptions, but the result was sure as hell close enough. That was enough of a push to make me revisit the web version again. One that would allow not only me, but other people to watch the collection too. And here we are.
+The idea of a web version floated around for a while without going anywhere until coding agents entered the picture. Pointing `codex` at the existing metadata reading logic and asking it to write me a script to convert all the mkv files into a web hostable format was the gateway that 
+gave me motivation to build this. A site that would allow not only me, but other people to watch the collection too. And here we are.
 
 ## How It Works
 
