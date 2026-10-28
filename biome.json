@@ -6,7 +6,14 @@
     "useIgnoreFile": false
   },
   "files": {
-    "ignore": ["frontend/dist/**", "node_modules/**", "abridged"],
+    "ignore": [
+      "frontend/dist/**",
+      "node_modules/**",
+      "abridged",
+      ".agents/**",
+      ".oil-ui/**",
+      "skills-lock.json"
+    ],
     "ignoreUnknown": true
   },
   "formatter": {

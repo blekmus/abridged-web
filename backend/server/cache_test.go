@@ -88,6 +88,9 @@ func TestSPAHandlerCacheHeaders(t *testing.T) {
 		"index.html": {
 			Data: []byte(`<html><body><div id="app"><!--app-shell--></div></body></html>`),
 		},
+		"app-shell.html": {
+			Data: []byte(`<div class="page-shell">Prerendered homepage</div>`),
+		},
 		"assets/app-123.js": {
 			Data: []byte(`console.log("app")`),
 		},

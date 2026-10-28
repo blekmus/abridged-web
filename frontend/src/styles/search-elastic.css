@@ -48,8 +48,16 @@
 }
 
 .search-welcome[data-tendon="graphite"] {
-  --tendon-tone: color-mix(in srgb, var(--color-muted) 25%, var(--color-surface));
-  --tendon-highlight: color-mix(in srgb, var(--color-body) 22%, var(--color-surface));
+  --tendon-tone: color-mix(
+    in srgb,
+    var(--color-muted) 25%,
+    var(--color-surface)
+  );
+  --tendon-highlight: color-mix(
+    in srgb,
+    var(--color-body) 22%,
+    var(--color-surface)
+  );
 }
 
 .tendon-edge {

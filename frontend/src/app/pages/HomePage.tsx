@@ -1,12 +1,10 @@
 // import type { ComponentChildren } from "preact";
 // import { useState } from "preact/hooks";
-import { useEffect } from "preact/hooks";
 import type { CatalogResponse } from "../../lib/types";
 import { BrowseSection } from "../components/BrowseSection";
 import { CreatorIndex } from "../components/CreatorIndex";
 import { HeroSearch } from "../components/HeroSearch";
 import { InlineError } from "../components/InlineError";
-import { scheduleEntrySurprisePreparation } from "../effects/entrySurprisePreparation";
 import { shuffledEntries } from "../entryUtils";
 import { optionalActiveEntryId } from "../propUtils";
 
@@ -32,8 +30,6 @@ export function HomePage({
   restoreFromHistory: boolean;
   activeEntryId?: string;
 }) {
-  useEffect(() => scheduleEntrySurprisePreparation(), []);
-
   const randomizedHomeEntries = getRandomizedHomeEntries(catalog);
 
   return (

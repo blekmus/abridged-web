@@ -20,5 +20,10 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["frontend/src/**/*.ts", "frontend/src/**/*.tsx", "vite.config.ts"]
+  "include": [
+    "frontend/src/**/*.ts",
+    "frontend/src/**/*.tsx",
+    "frontend/prerender.tsx",
+    "vite.config.ts"
+  ]
 }

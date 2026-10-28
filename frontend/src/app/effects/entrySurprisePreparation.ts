@@ -17,7 +17,7 @@ export function prepareEntrySurprise(): Promise<SceneModule> {
   return prepared;
 }
 
-/** Start after the initial page render, retain the warmed GPU resources for this page. */
+/** Prepare after search opens, retaining warmed GPU resources for this page. */
 export function scheduleEntrySurprisePreparation(): () => void {
   owners += 1;
   let cancelled = false;

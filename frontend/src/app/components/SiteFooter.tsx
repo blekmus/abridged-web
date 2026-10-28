@@ -8,7 +8,9 @@ export function SiteFooter() {
           <br />
           See you in the next barely legal site.
           <br />
-          <span style={{color: "var(--color-border)"}}>God I hope this doesn't get nuked as well</span>
+          <span style={{ color: "var(--color-border)" }}>
+            God I hope this doesn't get nuked as well
+          </span>
         </p>
       </div>
     </footer>

@@ -359,7 +359,14 @@ func (h *spaHandler) serveIndex(w http.ResponseWriter, r *http.Request, status i
 		meta = h.metaBuilder(r, status)
 	}
 
-	indexHTML := strings.Replace(string(data), "<!--app-shell-->", appShellForPath(r.URL.Path), 1)
+	shell, err := appShellForPath(h.staticFS, r.URL.Path)
+	if err != nil {
+		slog.Error("read app shell failed", "err", err)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	indexHTML := strings.Replace(string(data), "<!--app-shell-->", shell, 1)
 	body := []byte(injectHead(indexHTML, renderMeta(meta)))
 
 	if status != http.StatusOK {

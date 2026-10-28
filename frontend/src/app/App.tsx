@@ -37,11 +37,13 @@ type NavigationState = {
   pathname: string;
 };
 
-export function App() {
-  const [navigationState, setNavigationState] = useState<NavigationState>({
-    kind: "initial",
-    pathname: currentPath(),
-  });
+export function App({ initialPathname }: { initialPathname?: string } = {}) {
+  const [navigationState, setNavigationState] = useState<NavigationState>(
+    () => ({
+      kind: "initial",
+      pathname: initialPathname ?? currentPath(),
+    }),
+  );
   const [catalogState, setCatalogState] = useState<AsyncState<CatalogResponse>>(
     {
       data: null,

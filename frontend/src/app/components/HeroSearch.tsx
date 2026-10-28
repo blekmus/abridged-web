@@ -9,6 +9,7 @@ import {
 import { api } from "../../lib/api";
 import { navigate } from "../../lib/router";
 import type { CatalogResponse, EntrySummary } from "../../lib/types";
+import { scheduleEntrySurprisePreparation } from "../effects/entrySurprisePreparation";
 import { handleInternalLinkClick, scrollPageToTop } from "../navigation";
 import {
   MAX_SEARCH_QUERY_LENGTH,
@@ -35,11 +36,27 @@ export function HeroSearch({
   const fieldRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const stopSurprisePreparation = useRef<(() => void) | undefined>();
   const terms = useMemo(() => searchQueryTerms(query), [query]);
   const hasQuery = terms.length > 0;
   const resultsLoading =
     hasQuery && (requestLoading || completedQuery !== query);
   const showResults = expanded && terms.length > 0;
+
+  // Prepare the optional effect only once search is used, then retain the warm
+  // renderer across closes until this page unmounts.
+  useEffect(() => {
+    if (expanded && !stopSurprisePreparation.current) {
+      stopSurprisePreparation.current = scheduleEntrySurprisePreparation();
+    }
+  }, [expanded]);
+
+  useEffect(
+    () => () => {
+      stopSurprisePreparation.current?.();
+    },
+    [],
+  );
 
   useEffect(() => {
     if (!expanded || hasQuery) {
