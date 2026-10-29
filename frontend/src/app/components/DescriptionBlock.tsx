@@ -49,26 +49,22 @@ export function DescriptionBlock({ text }: { text: string }) {
 
   return (
     <section class="description-section" aria-label="Description">
-      <div class="description-block">
-        <div
-          class={`description-copy ${isCollapsed ? "collapsed" : "expanded"}`}
-        >
-          <div ref={copyRef}>
-            {paragraphs.map((paragraph) => (
-              <p key={paragraph}>{paragraph}</p>
-            ))}
-          </div>
+      <div class={`description-copy ${isCollapsed ? "collapsed" : "expanded"}`}>
+        <div ref={copyRef}>
+          {paragraphs.map((paragraph) => (
+            <p key={paragraph}>{paragraph}</p>
+          ))}
         </div>
-        {canExpand ? (
-          <button
-            type="button"
-            class="description-toggle"
-            onClick={() => setExpanded((value) => !value)}
-          >
-            {expanded ? "Collapse" : "Read more"}
-          </button>
-        ) : null}
       </div>
+      {canExpand ? (
+        <button
+          type="button"
+          class="description-toggle"
+          onClick={() => setExpanded((value) => !value)}
+        >
+          {expanded ? "Collapse" : "Read more"}
+        </button>
+      ) : null}
     </section>
   );
 }

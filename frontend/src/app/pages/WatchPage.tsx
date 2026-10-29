@@ -134,7 +134,6 @@ export function WatchPage({
               )}
               <div class="watch-credit">
                 <p class="watch-credit-row">
-                  <span class="watch-credit-label">Type</span>
                   <span class="watch-credit-value">
                     <a
                       href={browsePath}
@@ -150,7 +149,6 @@ export function WatchPage({
                   </span>
                 </p>
                 <p class="watch-credit-row">
-                  <span class="watch-credit-label">Produced by</span>
                   <span class="watch-credit-value">
                     <a
                       href={`/${entry.creatorSlug}`}
@@ -165,16 +163,14 @@ export function WatchPage({
                 </p>
                 {episodeDate ? (
                   <p class="watch-credit-row">
-                    <span class="watch-credit-label">Uploaded on</span>
                     <span class="watch-credit-value">{episodeDate}</span>
                   </p>
                 ) : null}
               </div>
+              {description ? (
+                <DescriptionBlock key={description} text={description} />
+              ) : null}
             </div>
-
-            {description ? (
-              <DescriptionBlock key={description} text={description} />
-            ) : null}
 
             {entry.type === "series" ? (
               <section class="episode-section">
@@ -184,27 +180,34 @@ export function WatchPage({
                 <div class="watch-metadata-grid card-grid">
                   {entry.episodes.map((item) => {
                     const itemWatchPath = episodeWatchPath(entry, item);
+                    const isCurrentEpisode = item.id === episode.id;
 
                     return (
                       <article
                         key={item.id}
-                        class={`browse-card watch-episode-card ${item.id === episode.id ? "is-active" : ""} ${restoreFromHistory ? "skip-enter-animation" : ""}`}
+                        class={`browse-card watch-episode-card ${isCurrentEpisode ? "is-active" : ""} ${restoreFromHistory ? "skip-enter-animation" : ""}`}
                       >
                         <a
                           href={itemWatchPath}
                           class="card-thumbnail-shell"
+                          aria-current={isCurrentEpisode ? "page" : undefined}
                           onClick={(event) => {
                             handleInternalLinkClick(event, itemWatchPath, {
                               scrollToTop: true,
                             });
                           }}
                         >
-                          <Thumbnail episode={item} title={entry.entryTitle} />
+                          <Thumbnail
+                            episode={item}
+                            title={entry.entryTitle}
+                            nowPlaying={isCurrentEpisode}
+                          />
                         </a>
                         <div class="card-copy">
                           <a
                             href={itemWatchPath}
                             class="card-title-link"
+                            aria-current={isCurrentEpisode ? "page" : undefined}
                             onClick={(event) => {
                               handleInternalLinkClick(event, itemWatchPath, {
                                 scrollToTop: true,
@@ -214,11 +217,6 @@ export function WatchPage({
                             <h3 class="card-title">
                               {item.displayTitle || item.videoTitle}
                             </h3>
-                            {item.date ? (
-                              <p class="card-submeta">
-                                {formatEpisodeDate(item.date)}
-                              </p>
-                            ) : null}
                           </a>
                         </div>
                       </article>
@@ -311,12 +309,11 @@ function WatchPageSkeleton({
                 <div class="loading-line watch-skeleton-credit-line" />
                 <div class="loading-line watch-skeleton-date-line" />
               </div>
-            </div>
-
-            <div class="description-block watch-skeleton-description">
-              <div class="loading-line" />
-              <div class="loading-line" />
-              <div class="loading-line short" />
+              <div class="watch-skeleton-description">
+                <div class="loading-line" />
+                <div class="loading-line" />
+                <div class="loading-line short" />
+              </div>
             </div>
 
             {isSeries ? (

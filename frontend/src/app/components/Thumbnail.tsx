@@ -5,10 +5,12 @@ export function Thumbnail({
   episode,
   title,
   hideDuration = false,
+  nowPlaying = false,
 }: {
   episode: EpisodeCard;
   title: string;
   hideDuration?: boolean;
+  nowPlaying?: boolean;
 }) {
   const markThumbnailLoaded = (image: HTMLImageElement) => {
     image.parentElement?.classList.add("has-loaded-thumbnail");
@@ -38,7 +40,16 @@ export function Thumbnail({
           <span>{title}</span>
         </div>
       )}
-      {!hideDuration && episode.durationSeconds > 0 ? (
+      {nowPlaying ? (
+        <span class="thumb-duration thumb-duration-now-playing">
+          <span class="episode-card-eq" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+          </span>
+          Now playing
+        </span>
+      ) : !hideDuration && episode.durationSeconds > 0 ? (
         <span class="thumb-duration">
           {formatDurationLabel(episode.durationSeconds)}
         </span>
