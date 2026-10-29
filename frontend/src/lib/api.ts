@@ -37,7 +37,9 @@ export const api = {
   },
 
   fetchCreator(creatorSlug: string): Promise<EntrySummary[]> {
-    return readJSON<EntrySummary[]>(`/api/creator/${creatorSlug}`);
+    return readJSON<EntrySummary[]>(
+      `/api/creator/${encodeURIComponent(creatorSlug)}`,
+    );
   },
 
   search(query: string, signal?: AbortSignal): Promise<EntrySummary[]> {

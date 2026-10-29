@@ -97,7 +97,7 @@ export function parseRoute(pathname: string): Route {
     }
 
     if (slug) {
-      return { name: "creator", slug };
+      return { name: "creator", slug: decodeCreatorSlug(slug) };
     }
   }
 
@@ -106,7 +106,7 @@ export function parseRoute(pathname: string): Route {
   if (parts.length === 2 && creatorSlug && entrySlug) {
     return {
       name: "watch-path",
-      creatorSlug,
+      creatorSlug: decodeCreatorSlug(creatorSlug),
       entrySlug,
     };
   }
@@ -114,11 +114,19 @@ export function parseRoute(pathname: string): Route {
   if (parts.length === 3 && creatorSlug && entrySlug && episodeSlug) {
     return {
       name: "watch-path",
-      creatorSlug,
+      creatorSlug: decodeCreatorSlug(creatorSlug),
       entrySlug,
       episodeSlug,
     };
   }
 
   return { name: "not-found", path: pathname };
+}
+
+function decodeCreatorSlug(segment: string): string {
+  try {
+    return decodeURIComponent(segment);
+  } catch {
+    return segment;
+  }
 }
