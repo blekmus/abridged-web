@@ -63,9 +63,7 @@ export function SearchWelcome({
       </svg>
       <div ref={contentRef} class="search-welcome-content">
         <div class="search-welcome-copy">
-          <h2>
-            Welcome to the <em>catalogue</em>
-          </h2>
+          <h2>Welcome to the catalogue</h2>
           <p id="search-welcome-hint">
             Type a title or creator to start searching
           </p>

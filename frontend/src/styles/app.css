@@ -586,12 +586,11 @@ video {
   display: flex;
   justify-content: center;
   flex-wrap: wrap;
-  gap: 10px 24px;
+  gap: 10px 8px;
   width: fit-content;
   max-width: 100%;
   margin: 12px auto 0;
   padding: 10px 20px;
-  border: 1px solid var(--color-border);
   border-radius: 5px;
   color: var(--color-muted);
   font-size: 13px;
@@ -599,6 +598,9 @@ video {
 }
 
 .search-stats a {
+  background-color: #131313;
+  padding: 3px 10px;
+  border-radius: 4px;
   white-space: nowrap;
 }
 
@@ -760,7 +762,6 @@ video {
 .search-welcome-copy p {
   margin: 0;
   color: var(--color-body);
-  font-family: var(--font-body);
   font-size: 14px;
   font-weight: 300;
   line-height: 1.5;

@@ -22,7 +22,10 @@ import { SearchWelcome } from "./SearchWelcome";
 export function HeroSearch({
   catalog,
   loading,
-}: { catalog: CatalogResponse; loading: boolean }) {
+}: {
+  catalog: CatalogResponse;
+  loading: boolean;
+}) {
   const [query, setQuery] = useState("");
   const [expanded, setExpanded] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -504,7 +507,7 @@ export function HeroSearch({
                     class="search-status-label search-status-punchline"
                     aria-hidden={!surprisePunchline}
                   >
-                    Woah! Nothing happened!! Congratulations!!!
+                    Congratulations! I'm proud of you!
                   </span>
                 </span>
               )}
