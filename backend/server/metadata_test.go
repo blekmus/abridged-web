@@ -207,3 +207,67 @@ func TestIndexHTMLRedirectsToHome(t *testing.T) {
 		t.Fatalf("Location = %q, want /", got)
 	}
 }
+
+func TestVideoObjectJSONLD(t *testing.T) {
+	library := loadTestLibrary(t)
+	router, err := NewRouter(library, Options{
+		AppEnv:        "test",
+		PublicBaseURL: "https://abridged.example",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, path := range []string{"/creator/show", "/creator/show/episode-2-next"} {
+		body := serveRouter(t, router, path, nil).Body.String()
+		if count := strings.Count(body, `<script type="application/ld+json">`); count != 1 {
+			t.Fatalf("%s: JSON-LD count = %d, want 1:\n%s", path, count, body)
+		}
+		for _, want := range []string{
+			`"@type":"VideoObject"`,
+			`"thumbnailUrl":"https://abridged.example/thumb/`,
+			`"contentUrl":"https://abridged.example/video/`,
+		} {
+			if !strings.Contains(body, want) {
+				t.Fatalf("%s: JSON-LD missing %s:\n%s", path, want, body)
+			}
+		}
+	}
+
+	for _, path := range []string{"/", "/series", "/creator", "/missing"} {
+		if body := serveRouter(t, router, path, nil).Body.String(); strings.Contains(body, "ld+json") {
+			t.Fatalf("%s: unexpected JSON-LD:\n%s", path, body)
+		}
+	}
+
+	rendered := renderMeta(pageMeta{Video: &videoObject{Name: `</script><script>alert(1)</script>`}})
+	if strings.Count(rendered, "</script>") != 1 {
+		t.Fatalf("JSON-LD did not escape script close:\n%s", rendered)
+	}
+}
+
+func TestISODateAndDuration(t *testing.T) {
+	for raw, want := range map[string]string{
+		"2019-05-12": "2019-05-12",
+		"20190512":   "2019-05-12",
+		" 20190512 ": "2019-05-12",
+		"May 2019":   "",
+		"":           "",
+	} {
+		if got := isoDate(raw); got != want {
+			t.Errorf("isoDate(%q) = %q, want %q", raw, got, want)
+		}
+	}
+	for seconds, want := range map[int]string{
+		0:    "",
+		45:   "PT45S",
+		60:   "PT1M",
+		754:  "PT12M34S",
+		3600: "PT1H",
+		3661: "PT1H1M1S",
+	} {
+		if got := isoDuration(seconds); got != want {
+			t.Errorf("isoDuration(%d) = %q, want %q", seconds, got, want)
+		}
+	}
+}

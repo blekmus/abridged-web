@@ -55,6 +55,20 @@ export type CreatorSummary = {
   entryCount: number;
 };
 
+// One card in Recently Added. `episode` is set when a new episode joined an
+// existing series; otherwise the card is the entry itself.
+export type RecentlyAddedItem = {
+  entry: EntrySummary;
+  episode?: RecentEpisode;
+  addedAt: string;
+};
+
+export type RecentEpisode = EpisodeCard & {
+  label: string;
+  title: string;
+  watchPath: string;
+};
+
 export type CatalogResponse = {
   series: EntrySummary[];
   shorts: EntrySummary[];
@@ -62,4 +76,5 @@ export type CatalogResponse = {
   songs: EntrySummary[];
   songAmvs: EntrySummary[];
   creators: CreatorSummary[];
+  recentlyAdded: RecentlyAddedItem[];
 };

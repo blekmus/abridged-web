@@ -5,6 +5,7 @@ import { BrowseSection } from "../components/BrowseSection";
 import { CreatorIndex } from "../components/CreatorIndex";
 import { HeroSearch } from "../components/HeroSearch";
 import { InlineError } from "../components/InlineError";
+import { RecentlyAdded } from "../components/RecentlyAdded";
 import { shuffledEntries } from "../entryUtils";
 import { optionalActiveEntryId } from "../propUtils";
 
@@ -52,6 +53,11 @@ export function HomePage({
       </section>
 
       {error ? <InlineError message={error} /> : null}
+      <RecentlyAdded
+        items={catalog.recentlyAdded}
+        loading={loading}
+        animateCards={!restoreFromHistory}
+      />
       <BrowseSection
         title="Shows"
         titleHref="/series"

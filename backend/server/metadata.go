@@ -1,11 +1,13 @@
 package server
 
 import (
+	"encoding/json"
 	"fmt"
 	"html"
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"abridged-web/backend/catalog"
 )
@@ -25,6 +27,23 @@ type pageMeta struct {
 	ImageAlt    string
 	OGType      string
 	NoIndex     bool
+	Video       *videoObject
+}
+
+// videoObject is schema.org VideoObject JSON-LD. It is emitted as a
+// type="application/ld+json" data block, which browsers never execute, so
+// CSP script-src does not apply and no nonce is needed. The output is a pure
+// function of the catalogue, so the HTML ETag stays stable per page.
+type videoObject struct {
+	Context      string `json:"@context"`
+	Type         string `json:"@type"`
+	Name         string `json:"name"`
+	Description  string `json:"description"`
+	ThumbnailURL string `json:"thumbnailUrl"`
+	UploadDate   string `json:"uploadDate,omitempty"`
+	Duration     string `json:"duration,omitempty"`
+	ContentURL   string `json:"contentUrl,omitempty"`
+	EmbedURL     string `json:"embedUrl,omitempty"`
 }
 
 type browsePageMeta struct {
@@ -188,7 +207,7 @@ func entryPageMetadata(base string, entry catalog.Entry) pageMeta {
 		image = defaultImagePath
 	}
 
-	return pageMeta{
+	meta := pageMeta{
 		Title:       entry.EntryTitle,
 		Description: summarize(description, 300),
 		Canonical:   absoluteURL(base, entry.WatchPath()),
@@ -196,6 +215,10 @@ func entryPageMetadata(base string, entry catalog.Entry) pageMeta {
 		ImageAlt:    entry.EntryTitle,
 		OGType:      "video.other",
 	}
+	if episode, ok := defaultEpisode(entry); ok {
+		meta.Video = newVideoObject(base, meta, episode)
+	}
+	return meta
 }
 
 func episodePageMetadata(base string, entry catalog.Entry, episode catalog.Episode) pageMeta {
@@ -231,7 +254,7 @@ func episodePageMetadata(base string, entry catalog.Entry, episode catalog.Episo
 		canonicalPath = entry.WatchPath()
 	}
 
-	return pageMeta{
+	meta := pageMeta{
 		Title:       title,
 		Description: summarize(description, 300),
 		Canonical:   absoluteURL(base, canonicalPath),
@@ -239,6 +262,65 @@ func episodePageMetadata(base string, entry catalog.Entry, episode catalog.Episo
 		ImageAlt:    title,
 		OGType:      "video.episode",
 	}
+	meta.Video = newVideoObject(base, meta, episode)
+	return meta
+}
+
+func defaultEpisode(entry catalog.Entry) (catalog.Episode, bool) {
+	for _, episode := range entry.Episodes {
+		if episode.ID == entry.DefaultEpisodeID {
+			return episode, true
+		}
+	}
+	if len(entry.Episodes) > 0 {
+		return entry.Episodes[0], true
+	}
+	return catalog.Episode{}, false
+}
+
+func newVideoObject(base string, meta pageMeta, episode catalog.Episode) *videoObject {
+	return &videoObject{
+		Context:      "https://schema.org",
+		Type:         "VideoObject",
+		Name:         meta.Title,
+		Description:  meta.Description,
+		ThumbnailURL: meta.Image,
+		UploadDate:   isoDate(episode.Date),
+		Duration:     isoDuration(episode.DurationSeconds),
+		ContentURL:   absoluteURL(base, episode.VideoURL),
+		EmbedURL:     meta.Canonical,
+	}
+}
+
+// isoDate normalises archive dates (YYYY-MM-DD or YYYYMMDD) to ISO 8601,
+// returning "" for anything else.
+func isoDate(raw string) string {
+	raw = strings.TrimSpace(raw)
+	for _, layout := range []string{"2006-01-02", "20060102"} {
+		if parsed, err := time.Parse(layout, raw); err == nil {
+			return parsed.Format("2006-01-02")
+		}
+	}
+	return ""
+}
+
+func isoDuration(seconds int) string {
+	if seconds <= 0 {
+		return ""
+	}
+	h, m, sec := seconds/3600, seconds%3600/60, seconds%60
+	var b strings.Builder
+	b.WriteString("PT")
+	if h > 0 {
+		fmt.Fprintf(&b, "%dH", h)
+	}
+	if m > 0 {
+		fmt.Fprintf(&b, "%dM", m)
+	}
+	if sec > 0 || (h == 0 && m == 0) {
+		fmt.Fprintf(&b, "%dS", sec)
+	}
+	return b.String()
 }
 
 func notFoundPageMeta(base string) pageMeta {
@@ -389,6 +471,16 @@ func renderMeta(meta pageMeta) string {
 	if meta.Image != "" {
 		b.WriteString(`<meta name="twitter:image" content="` + html.EscapeString(meta.Image) + `">` + "\n")
 		b.WriteString(`<meta name="twitter:image:alt" content="` + html.EscapeString(imageAlt) + `">` + "\n")
+	}
+
+	// json.Marshal escapes <, >, and & as \u003c etc., so catalogue text
+	// cannot close the script element.
+	if meta.Video != nil {
+		if data, err := json.Marshal(meta.Video); err == nil {
+			b.WriteString(`<script type="application/ld+json">`)
+			b.Write(data)
+			b.WriteString("</script>\n")
+		}
 	}
 
 	return b.String()

@@ -13,20 +13,27 @@ export function BrowseCard({
   animate,
   animationDelay,
   hideDuration = false,
+  href,
+  poster: posterOverride,
+  subtitle,
 }: {
   entry: BrowseCardEntry;
   active: boolean;
   animate: boolean;
   animationDelay: number;
   hideDuration?: boolean;
+  /** Link somewhere other than the entry page, e.g. a specific episode. */
+  href?: string;
+  poster?: EpisodeCard;
+  subtitle?: string;
 }) {
-  const poster = posterForEntry(entry);
-  const watchPath = entryWatchPath(entry);
+  const poster = posterOverride ?? posterForEntry(entry);
+  const watchPath = href ?? entryWatchPath(entry);
   const creatorPath = `/${entry.creatorSlug}`;
 
   return (
     <article
-      class={`browse-card ${entry.type === "series" ? "is-collection" : ""} ${active ? "is-active" : ""} ${animate ? "" : "skip-enter-animation"}`}
+      class={`browse-card ${entry.type === "series" && !href ? "is-collection" : ""} ${active ? "is-active" : ""} ${animate ? "" : "skip-enter-animation"}`}
       style={animate ? { animationDelay: `${animationDelay * 60}ms` } : {}}
     >
       <a
@@ -64,6 +71,7 @@ export function BrowseCard({
           }}
         >
           <h3 class="card-title">{entry.entryTitle}</h3>
+          {subtitle ? <p class="card-subtitle">{subtitle}</p> : null}
         </a>
       </div>
     </article>

@@ -13,6 +13,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 	"unicode"
 
 	"golang.org/x/text/unicode/norm"
@@ -65,22 +66,23 @@ type EpisodeCard struct {
 }
 
 type Episode struct {
-	ID              string `json:"id"`
-	EntryID         string `json:"entryId"`
-	Label           string `json:"label"`
-	VideoTitle      string `json:"videoTitle"`
-	DisplayTitle    string `json:"displayTitle"`
-	RawStem         string `json:"rawStem"`
-	Kind            string `json:"kind,omitempty"`
-	Number          string `json:"number,omitempty"`
-	Description     string `json:"description,omitempty"`
-	Date            string `json:"date,omitempty"`
-	DurationSeconds int    `json:"durationSeconds"`
-	VideoURL        string `json:"videoUrl"`
-	ThumbnailURL    string `json:"thumbnailUrl,omitempty"`
-	HasThumbnail    bool   `json:"hasThumbnail"`
-	VideoPath       string `json:"-"`
-	ThumbnailPath   string `json:"-"`
+	ID              string    `json:"id"`
+	EntryID         string    `json:"entryId"`
+	Label           string    `json:"label"`
+	VideoTitle      string    `json:"videoTitle"`
+	DisplayTitle    string    `json:"displayTitle"`
+	RawStem         string    `json:"rawStem"`
+	Kind            string    `json:"kind,omitempty"`
+	Number          string    `json:"number,omitempty"`
+	Description     string    `json:"description,omitempty"`
+	Date            string    `json:"date,omitempty"`
+	DurationSeconds int       `json:"durationSeconds"`
+	VideoURL        string    `json:"videoUrl"`
+	ThumbnailURL    string    `json:"thumbnailUrl,omitempty"`
+	HasThumbnail    bool      `json:"hasThumbnail"`
+	VideoPath       string    `json:"-"`
+	ThumbnailPath   string    `json:"-"`
+	AddedAt         time.Time `json:"-"`
 }
 
 type EpisodeAsset struct {
@@ -137,6 +139,8 @@ type CatalogResponse struct {
 	Songs    []EntrySummary   `json:"songs"`
 	SongAMVs []EntrySummary   `json:"songAmvs"`
 	Creators []CreatorSummary `json:"creators"`
+
+	RecentlyAdded []RecentlyAddedItem `json:"recentlyAdded"`
 }
 
 type Library struct {
@@ -147,6 +151,7 @@ type Library struct {
 	byEntryID     map[string]Entry
 	byEpisodeID   map[string]EpisodeAsset
 	byCreatorSlug map[string][]Entry
+	recentlyAdded []RecentlyAddedItem
 	cacheTag      string
 }
 
@@ -209,7 +214,9 @@ func Load(root string) (*Library, error) {
 		}
 	}
 
-	cacheTag, err := catalogueCacheTag(lib.all)
+	lib.recentlyAdded = buildRecentlyAdded(lib.all)
+
+	cacheTag, err := catalogueCacheTag(lib.all, lib.recentlyAdded)
 	if err != nil {
 		return nil, err
 	}
@@ -230,10 +237,15 @@ func (l *Library) CacheTag() string {
 // catalogueCacheVersion must be bumped whenever the shape of an API response
 // changes. Without it, a client holding a pre-deploy ETag would receive a 304
 // and keep using a response that the new frontend can no longer parse.
-const catalogueCacheVersion = 2
+const catalogueCacheVersion = 3
 
-func catalogueCacheTag(entries []Entry) (string, error) {
-	data, err := json.Marshal(entries)
+// recentlyAdded is hashed separately because it depends on file times, which
+// the entry JSON does not carry.
+func catalogueCacheTag(entries []Entry, recentlyAdded []RecentlyAddedItem) (string, error) {
+	data, err := json.Marshal(struct {
+		Entries       []Entry
+		RecentlyAdded []RecentlyAddedItem
+	}{entries, recentlyAdded})
 	if err != nil {
 		return "", fmt.Errorf("hash catalogue: %w", err)
 	}
@@ -271,6 +283,8 @@ func (l *Library) CatalogResponse() CatalogResponse {
 		Songs:    entrySummaries(entriesWithSubtype(l.byType[EntryTypeSong], "")),
 		SongAMVs: entrySummaries(entriesWithSubtype(l.byType[EntryTypeSong], EntrySubtypeAMV)),
 		Creators: l.creatorSummaries(),
+
+		RecentlyAdded: l.recentlyAdded,
 	}
 }
 
@@ -658,6 +672,7 @@ func (l *Library) scanSingleRelease(entryPath, entryID string, entryType EntryTy
 			HasThumbnail:    thumbnailURL != "",
 			VideoPath:       videoPath,
 			ThumbnailPath:   thumbPath,
+			AddedAt:         fileModTime(videoPath),
 		},
 		videoPath: videoPath,
 		thumbPath: thumbPath,
@@ -708,6 +723,7 @@ func (l *Library) scanSeries(entryPath, entryID string) ([]episodeRecord, error)
 				HasThumbnail:    thumbnailURL != "",
 				VideoPath:       videoPath,
 				ThumbnailPath:   thumbPath,
+				AddedAt:         fileModTime(videoPath),
 			},
 			videoPath:   videoPath,
 			thumbPath:   thumbPath,

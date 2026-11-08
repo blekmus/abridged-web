@@ -41,6 +41,7 @@ const catalog: CatalogResponse = {
   shots: [],
   songs: [],
   songAmvs: [],
+  recentlyAdded: [],
   creators: [],
 };
 

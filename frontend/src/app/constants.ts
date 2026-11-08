@@ -6,6 +6,7 @@ export const EMPTY_CATALOG: CatalogResponse = {
   shots: [],
   songs: [],
   songAmvs: [],
+  recentlyAdded: [],
   creators: [],
 };
 
